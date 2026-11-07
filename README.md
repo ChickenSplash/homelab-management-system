@@ -76,7 +76,7 @@ Sign-in flow: `GET /sanctum/csrf-cookie`, then send the `XSRF-TOKEN` cookie back
 | `GET` / `PATCH` | `/api/auth/me` | Current user; change `display_name` |
 | `PUT` | `/api/auth/password` | `current_password`, `password`, `password_confirmation` (not for guests) |
 | `GET` | `/api/realtime` | Reverb app key for the WebSocket client |
-| `POST` | `/api/broadcasting/auth` | Private channel auth (`private-user.{id}`). Events on it: `ping`, `friends.changed`, `message.sent`, `message.deleted`, `conversation.read`, `conversations.changed`, `presence.changed`, `typing`. Group messages reach each member here too |
+| `POST` | `/api/broadcasting/auth` | Private channel auth (`private-user.{id}`). Events on it: `ping`, `friends.changed`, `message.sent`, `message.updated`, `message.deleted`, `conversation.read`, `conversations.changed`, `presence.changed`, `typing`. Group messages reach each member here too |
 | `POST` | `/api/ping` | Broadcasts a `ping` to your own channel |
 | `GET` | `/api/friends` | Friends and requests: `[{user, status: friend/incoming/outgoing, since}]` |
 | `POST` | `/api/friends` | `id`: send a request (accepts at once if they already asked you) |
@@ -88,9 +88,10 @@ Sign-in flow: `GET /sanctum/csrf-cookie`, then send the `XSRF-TOKEN` cookie back
 | `GET` | `/api/conversations` | Your DMs and groups, with last message and `unread_count`; groups add `name`, `role`, `member_count`, `invite_code` |
 | `GET` | `/api/conversations/{c}` | One conversation |
 | `GET` | `/api/conversations/{c}/messages` | 50 messages, oldest first; `?before={messageId}` pages back |
-| `POST` | `/api/conversations/{c}/messages` | `body` (max 2,000), `nonce` (client temp ID; a retry returns the saved copy) |
+| `POST` | `/api/conversations/{c}/messages` | `body` (max 2,000), `nonce` (client temp ID; a retry returns the saved copy), optional `reply_to_message_id` (live text in this conversation). Returns a shallow `reply_to` preview |
 | `DELETE` | `/api/conversations/{c}/messages/{m}` | Delete your own message |
 | `POST` | `/api/conversations/{c}/read` | `message_id`: move your read marker forward |
+| `PATCH` | `/api/conversations/{c}/messages/{m}` | Edit your own text: `body`, up to 2,000 characters. Sets `edited_at` and broadcasts `message.updated`, without new unread messages |
 | `POST` | `/api/conversations/{c}/typing` | Tell the other members you're typing |
 | `GET` | `/api/presence` | Everyone you can see who isn't offline (yourself included): `{public_id: status}` |
 | `POST` | `/api/presence/active` | You did something; ten quiet minutes means idle |

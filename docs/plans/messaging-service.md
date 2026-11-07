@@ -4,7 +4,9 @@ A bespoke chat app (Discord / WhatsApp / Telegram inspired) running on the homel
 This repo (formerly `projects-panel`) becomes the **Homelab Management System (HMS)**: a
 front-end-free Laravel API that serves this chat app and any future homelab apps.
 
-Tick items off as they land so this file stays the source of truth.
+**Status: closed, 7 November 2026.** Phases 0 to 5 and the final editing/replies batch are
+complete. The user chose to stop here. Reactions, attachments, custom handles, voice and the
+visual redesign are deferred, not outstanding work for this plan.
 
 ## Decisions
 
@@ -46,7 +48,7 @@ portfolio / glassbox ──/api/contact──► hms
   - `hms`: HTTP API (Octane + FrankenPHP)
   - `hms-reverb`: WebSocket server (Laravel Reverb), pushes live events to browsers
   - `hms-queue`: background job worker (mail and other slow jobs)
-  - `hms-scheduler`: timed jobs (guest cleanup)
+  - `hms-scheduler`: timed jobs (guest cleanup and presence reconciliation)
 - **chat-ui**: separate repo, nginx serving the built React app and proxying `/api`,
   `/sanctum` and `/app` (Reverb WebSocket) so everything is same-origin.
 - **Auth**: Sanctum SPA cookie (session) auth for browsers. Sanctum bearer tokens remain
@@ -62,7 +64,7 @@ portfolio / glassbox ──/api/contact──► hms
 - **blocks**: `blocker_id`, `blocked_id`. Separate from friendships: blocks are one-way and two people can block each other
 - **conversations**: `type` (dm / group), `dm_key` (one DM per pair), `created_by`, `last_message_at`; groups add `name`, `description`, `visibility` (public / private), `invite_code`
 - **conversation_members**: `conversation_id`, `user_id`, `role` (owner / admin / mod / member), `last_read_message_id`
-- **chat_messages**: `conversation_id`, `user_id` (null once the author is deleted), `type` (text / system), `body`, `meta` (system events: who did what), `nonce`, `edited_at`, soft deletes
+- **chat_messages**: `conversation_id`, `user_id` (null once the author is deleted), `type` (text / system), `body`, `meta` (system events: who did what), `nonce`, `edited_at`, nullable `reply_to_message_id` (self-reference), soft deletes
 - **conversation_bans**: `conversation_id`, `user_id`, `banned_by`
 - **messages**: unchanged, the portfolio contact form
 
@@ -77,7 +79,8 @@ DMs are two-member conversations, so DMs and groups share one message and real-t
 | Assign roles (up to admin) | | | ✓ | ✓ |
 | Be kicked or demoted | ✓ | ✓ | ✓ | |
 
-Enforced with Laravel Policies, with a test per rule.
+Enforced server-side with membership and role checks; editing uses `ChatMessagePolicy`.
+Tests cover each permission rule.
 
 ## Phases
 
@@ -188,8 +191,35 @@ and receives a live ping.
 - [x] Tests: presence, statuses, typing (HMS); Playwright for status changes, closing a tab,
   reloads, typing, the divider and banner, and a WebKit run at iPhone size
 
-### Phase 6 · Later
-- Edits, replies, reactions, attachments (maybe via copyparty), custom handles, voice
+### Phase 6 · Final batch: editing and replies
+- [x] Edit your own text messages in DMs and groups, no time limit while still a member.
+  Nobody, including owners/admins, can edit another person's text. System/deleted messages
+  cannot be edited; blocked DMs and DMs with a deleted partner reject edits.
+- [x] `PATCH /api/conversations/{conversation}/messages/{message}` with scoped binding,
+  `ChatMessagePolicy::update`, body validation (nonblank, up to 2,000 characters) and the
+  existing message rate limit. No-op saves don't set `edited_at` or broadcast.
+- [x] Inline editor: Enter saves, Shift+Enter adds a line, Esc cancels; an empty composer's
+  Up arrow edits your latest loaded message. Failed saves retain the draft for retry.
+  An `(edited)` label shows the timestamp on hover, with no visible edit history.
+- [x] Edits broadcast `message.updated` and replace text/previews in place. They do not
+  bump conversation order, move read markers or add unread messages.
+- [x] Replies use a nullable self-reference, `reply_to_message_id`. Sending validates that
+  the target is a live text message in the same conversation. The composer shows who you're
+  replying to and supports cancellation; pending/failed sends preserve the reply target.
+- [x] Shallow author/text preview (up to 200 characters), kept current on edits. Deleted
+  originals show `Original message deleted` without their old text or author. Quotes from
+  blocked authors are collapsed. Clicking a live preview loads older pages as needed,
+  scrolls to the original and briefly highlights it.
+- [x] Desktop message tools work on hover or keyboard focus; phone tools appear on tap.
+- [x] Backend permission/validation tests and Chromium, Firefox and WebKit phone coverage.
+  Final local Docker verification: 114 backend tests (575 assertions), Pint/type-check/lint
+  clean, all 44 desktop cases run twice (88 passes), all 3 phone cases run three times
+  (9 passes). Checked desktop/phone screenshots and clean API/Reverb/queue/scheduler logs.
+
+### Deferred outside this closed plan
+- Reactions, attachments (possibly copyparty), custom handles, voice and visual redesign.
+- Notifications/sounds/push, group muting, swipe gestures, rail reordering and multiple
+  channels within groups remain unscheduled.
 
 ## Notes
 

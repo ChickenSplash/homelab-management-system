@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 // A message in a DM or group. Not to be confused with Message, the contact form inbox.
-#[Fillable(['conversation_id', 'user_id', 'body', 'nonce', 'type', 'meta'])]
+#[Fillable(['conversation_id', 'user_id', 'body', 'nonce', 'type', 'meta', 'reply_to_message_id'])]
 class ChatMessage extends Model
 {
     use SoftDeletes;
@@ -23,6 +23,12 @@ class ChatMessage extends Model
     public function conversation(): BelongsTo
     {
         return $this->belongsTo(Conversation::class);
+    }
+
+    /** @return BelongsTo<ChatMessage, $this> */
+    public function replyTo(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'reply_to_message_id')->withTrashed();
     }
 
     /**
@@ -42,6 +48,13 @@ class ChatMessage extends Model
             'nonce' => $this->nonce,
             'created_at' => $this->created_at->toIso8601String(),
             'edited_at' => $this->edited_at?->toIso8601String(),
+            // A shallow, current preview, never a snapshot or a recursive reply chain.
+            'reply_to' => $this->reply_to_message_id ? [
+                'id' => $this->reply_to_message_id,
+                'author' => $this->replyTo && ! $this->replyTo->trashed() ? $this->replyTo->user?->toPublicArray() : null,
+                'body' => $this->replyTo && ! $this->replyTo->trashed() ? mb_substr($this->replyTo->body, 0, 200) : null,
+                'deleted' => ! $this->replyTo || $this->replyTo->trashed(),
+            ] : null,
         ];
     }
 

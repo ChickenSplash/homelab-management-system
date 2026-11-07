@@ -10,6 +10,8 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Validation\Rule;
 
 // What DMs and groups share: listing, messages and read markers. Every live update goes to
 // each member's own user channel, so a browser holds one subscription however many
@@ -73,7 +75,7 @@ class ConversationController
         $before = $request->integer('before');
 
         $page = $conversation->messages()
-            ->with('user')
+            ->with(['user', 'replyTo.user'])
             ->when($before > 0, fn ($q) => $q->where('id', '<', $before))
             ->orderByDesc('id')
             ->limit(self::PAGE_SIZE + 1)
@@ -112,11 +114,19 @@ class ConversationController
             }
         }
 
+        // Check after nonce deduplication: a successful send can be retried after its
+        // original is deleted without creating a second reply or rejecting the saved one.
+        $validated += $request->validate([
+            'reply_to_message_id' => ['nullable', 'integer', Rule::exists('chat_messages', 'id')
+                ->where('conversation_id', $conversation->id)->where('type', 'text')->whereNull('deleted_at')],
+        ]);
+
         $message = DB::transaction(function () use ($conversation, $member, $me, $validated) {
             $message = $conversation->messages()->create([
                 'user_id' => $me->id,
                 'body' => $validated['body'],
                 'nonce' => $validated['nonce'] ?? null,
+                'reply_to_message_id' => $validated['reply_to_message_id'] ?? null,
             ]);
 
             $conversation->update(['last_message_at' => $message->created_at]);
@@ -129,6 +139,22 @@ class ConversationController
         Live::to($conversation->memberUsers(), 'message.sent', $payload);
 
         return response()->json($payload, 201);
+    }
+
+    public function editMessage(Request $request, Conversation $conversation, ChatMessage $message): JsonResponse
+    {
+        $conversation->membershipOf($request->user());
+        Gate::authorize('update', $message);
+        $body = $request->validate(['body' => ['required', 'string', 'max:2000', 'regex:/\S/u']])['body'];
+
+        if ($body !== $message->body) {
+            $message->body = $body;
+            $message->edited_at = now();
+            $message->save();
+            Live::to($conversation->memberUsers(), 'message.updated', $message->load(['user', 'replyTo.user'])->toPublicArray());
+        }
+
+        return response()->json($message->load(['user', 'replyTo.user'])->toPublicArray());
     }
 
     /** Tell the others you're typing. Browsers send this every few seconds while you type. */

@@ -49,6 +49,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/conversations/{conversation}/messages', 'messages');
         Route::post('/conversations/{conversation}/messages', 'send')->middleware('throttle:messages');
         Route::delete('/conversations/{conversation}/messages/{message}', 'deleteMessage')->scopeBindings();
+        Route::patch('/conversations/{conversation}/messages/{message}', 'editMessage')->scopeBindings()->middleware('throttle:messages');
         Route::post('/conversations/{conversation}/read', 'read');
         Route::post('/conversations/{conversation}/typing', 'typing')->middleware('throttle:typing');
     });

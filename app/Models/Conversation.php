@@ -53,7 +53,7 @@ class Conversation extends Model
     {
         $query->select('conversations.*')
             ->withCount('members')
-            ->with('members.user', 'lastMessage.user')
+            ->with('members.user', 'lastMessage.user', 'lastMessage.replyTo.user')
             ->addSelect(['unread_count' => ChatMessage::selectRaw('count(*)')
                 ->whereColumn('chat_messages.conversation_id', 'conversations.id')
                 ->where('chat_messages.type', 'text')
