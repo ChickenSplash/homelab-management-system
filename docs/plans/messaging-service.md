@@ -215,6 +215,9 @@ and receives a live ping.
   Final local Docker verification: 114 backend tests (575 assertions), Pint/type-check/lint
   clean, all 44 desktop cases run twice (88 passes), all 3 phone cases run three times
   (9 passes). Checked desktop/phone screenshots and clean API/Reverb/queue/scheduler logs.
+- [x] Deployed to the homelab after `backup-before-replies-2026-11-07.sqlite`; production
+  smoke passed for replies, editing, live preview changes, deleted-original tombstones,
+  persistence after reload and phone layout. Both smoke-test guests logged out.
 
 ### Deferred outside this closed plan
 - Reactions, attachments (possibly copyparty), custom handles, voice and visual redesign.
