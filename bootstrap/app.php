@@ -29,6 +29,9 @@ return Application::configure(basePath: dirname(__DIR__))
         // Browser apps on SANCTUM_STATEFUL_DOMAINS get session cookies and CSRF on /api.
         // Everything else (the contact form, scripts with bearer tokens) stays stateless.
         $middleware->statefulApi();
+
+        // API only: there is no login page, so a signed-out request just gets a 401.
+        $middleware->redirectGuestsTo(fn () => null);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(fn (Request $request) => true);

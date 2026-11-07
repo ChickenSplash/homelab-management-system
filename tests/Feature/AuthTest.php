@@ -144,6 +144,11 @@ class AuthTest extends TestCase
         $this->assertDatabaseMissing('users', ['id' => $guest->id]);
     }
 
+    public function test_signed_out_requests_get_a_json_401_even_without_asking_for_json(): void
+    {
+        $this->get('/api/friends')->assertUnauthorized()->assertJson(['message' => 'Unauthenticated.']);
+    }
+
     public function test_a_bearer_token_logout_revokes_only_that_token(): void
     {
         $user = User::factory()->create();

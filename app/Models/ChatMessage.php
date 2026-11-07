@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 // A message in a DM or group. Not to be confused with Message, the contact form inbox.
-#[Fillable(['conversation_id', 'user_id', 'body', 'nonce'])]
+#[Fillable(['conversation_id', 'user_id', 'body', 'nonce', 'type', 'meta'])]
 class ChatMessage extends Model
 {
     use SoftDeletes;
@@ -35,8 +35,10 @@ class ChatMessage extends Model
         return [
             'id' => $this->id,
             'conversation_id' => $this->conversation_id,
+            'type' => $this->type ?? 'text',
             'author' => $this->user?->toPublicArray(),
             'body' => $this->body,
+            'meta' => $this->meta,
             'nonce' => $this->nonce,
             'created_at' => $this->created_at->toIso8601String(),
             'edited_at' => $this->edited_at?->toIso8601String(),
@@ -52,6 +54,7 @@ class ChatMessage extends Model
     {
         return [
             'edited_at' => 'datetime',
+            'meta' => 'array',
         ];
     }
 }

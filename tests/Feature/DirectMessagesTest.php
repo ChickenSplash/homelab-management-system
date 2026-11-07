@@ -84,7 +84,7 @@ class DirectMessagesTest extends TestCase
             ->json();
 
         foreach ([$this->me, $this->them] as $user) {
-            Event::assertDispatched(LiveUpdate::class, fn (LiveUpdate $e) => $e->recipient === $user->public_id
+            Event::assertDispatched(LiveUpdate::class, fn (LiveUpdate $e) => $e->reaches($user)
                 && $e->name === 'message.sent' && $e->payload['id'] === $message['id'] && ! isset($e->payload['author']['email']));
         }
     }
@@ -148,7 +148,7 @@ class DirectMessagesTest extends TestCase
 
         $this->actingAs($this->them)->postJson("/api/conversations/{$dm}/read", ['message_id' => $ids[1]])->assertNoContent();
         $this->assertSame(1, $this->conversationsOf($this->them)[0]['unread_count']);
-        Event::assertDispatched(LiveUpdate::class, fn (LiveUpdate $e) => $e->recipient === $this->them->public_id && $e->name === 'conversation.read');
+        Event::assertDispatched(LiveUpdate::class, fn (LiveUpdate $e) => $e->reaches($this->them) && $e->name === 'conversation.read');
 
         // Never backwards, and never past the last message.
         $this->actingAs($this->them)->postJson("/api/conversations/{$dm}/read", ['message_id' => $ids[0]]);
@@ -182,7 +182,7 @@ class DirectMessagesTest extends TestCase
 
         $this->assertSame(['keep'], array_column($this->actingAs($this->them)->getJson("/api/conversations/{$dm}/messages")->json('data'), 'body'));
         $this->assertSame('keep', $this->conversationsOf($this->them)[0]['last_message']['body']);
-        Event::assertDispatched(LiveUpdate::class, fn (LiveUpdate $e) => $e->recipient === $this->them->public_id && $e->name === 'message.deleted' && $e->payload['id'] === $mine);
+        Event::assertDispatched(LiveUpdate::class, fn (LiveUpdate $e) => $e->reaches($this->them) && $e->name === 'message.deleted' && $e->payload['id'] === $mine);
     }
 
     public function test_a_message_id_from_another_conversation_is_not_found(): void
@@ -216,7 +216,7 @@ class DirectMessagesTest extends TestCase
         $this->assertNull($list[0]['user']);
         $this->assertNull($this->actingAs($this->me)->getJson("/api/conversations/{$dm}/messages")->json('data.0.author'));
         $this->send($dm, 'hello?')->assertForbidden();
-        Event::assertDispatched(LiveUpdate::class, fn (LiveUpdate $e) => $e->recipient === $this->me->public_id && $e->name === 'conversations.changed');
+        Event::assertDispatched(LiveUpdate::class, fn (LiveUpdate $e) => $e->reaches($this->me) && $e->name === 'conversations.changed');
     }
 
     public function test_a_dm_with_nobody_left_is_removed(): void

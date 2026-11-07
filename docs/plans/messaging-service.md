@@ -58,9 +58,10 @@ portfolio / glassbox ──/api/contact──► hms
   `password` (nullable), `is_guest`, timestamps
 - **friendships**: `requester_id`, `addressee_id`, `accepted_at` (null while pending), one row per pair
 - **blocks**: `blocker_id`, `blocked_id`. Separate from friendships: blocks are one-way and two people can block each other
-- **conversations**: `type` (dm / group), `dm_key` (one DM per pair), `created_by`, `last_message_at`; groups add `name`, `visibility`, `invite_code` in phase 4
-- **conversation_members**: `conversation_id`, `user_id`, `role` (owner / admin / moderator / member), `last_read_message_id`
-- **chat_messages**: `conversation_id`, `user_id` (null once the author is deleted), `body`, `nonce`, `edited_at`, soft deletes
+- **conversations**: `type` (dm / group), `dm_key` (one DM per pair), `created_by`, `last_message_at`; groups add `name`, `description`, `visibility` (public / private), `invite_code`
+- **conversation_members**: `conversation_id`, `user_id`, `role` (owner / admin / mod / member), `last_read_message_id`
+- **chat_messages**: `conversation_id`, `user_id` (null once the author is deleted), `type` (text / system), `body`, `meta` (system events: who did what), `nonce`, `edited_at`, soft deletes
+- **conversation_bans**: `conversation_id`, `user_id`, `banned_by`
 - **messages**: unchanged, the portfolio contact form
 
 DMs are two-member conversations, so DMs and groups share one message and real-time path.
@@ -109,7 +110,7 @@ Enforced with Laravel Policies, with a test per rule.
 - [x] Dockerfile on FrankenPHP + Octane; compose with the four services
 - [x] Copy volume `projects-panel_database` → `hms_database` (old volume kept as a backup)
 - [x] `project-panel:3000` → `hms:3000` in `glassbox/server.js` and `portfolio/nginx.conf`, restart both
-- [ ] Remove the `chickensplash.dpdns.org` tunnel hostname (Cloudflare dashboard, by hand)
+- [x] Remove the `chickensplash.dpdns.org` tunnel hostname (Cloudflare dashboard, by hand)
 - [x] Update the homelab skill file
 
 **10 to 13. Chat front end**
@@ -147,8 +148,22 @@ and receives a live ping.
 - [x] Playwright: two browsers befriend, chat, delete, fail and retry a send, and block
 
 ### Phase 4 · Groups
-- Create (creator is owner), public / private, invite links, browse public groups
-- Roles, kick, leave (with last-admin hand-over)
+- [x] Create (creator is owner; up to 10 owned each, guests included), name, description
+- [x] Public (Explore, search by name, biggest first) or private (invite link only)
+- [x] One invite link per group, no expiry; any member can copy it, admins can reset it
+- [x] Roles owner > admin > mod > member; you act only on lower ranks. Admins give roles up to
+  admin, only the owner demotes admins; the owner can transfer ownership or delete the group
+- [x] Mods and above kick and delete lower ranks' messages; admins and above ban and unban
+  (bans stop rejoining by Explore or link, and can be made before someone joins)
+- [x] Owner leaves (or a guest owner logs out): the oldest of the highest remaining rank takes
+  over; the last one out deletes the group
+- [x] System messages for joins, leaves, kicks, bans, role and owner changes; they don't count as unread
+- [x] Blocked people's messages collapse to "Blocked message · Show"
+- [x] 200 member cap; a message to a group goes to every member's channel in one broadcast
+- [x] Rail icons with unread badges, group sidebar, member list, group settings, Explore,
+  create / join page and `/invite/:code` landing page
+- [x] Tests: one per permission rule (HMS), and Playwright for joining, invites, roles, kicks,
+  bans, hand-over and blocked messages
 
 ### Phase 5 · Polish
 - Online presence, typing indicator, unread divider, mobile layout
@@ -160,7 +175,10 @@ and receives a live ping.
 ## Notes
 
 - Live events go through `App\Support\Live`, which broadcasts `LiveUpdate` to each user's
-  private channel and reports (never throws) if Reverb is down.
+  private channel and reports (never throws) if Reverb is down. One event goes to all its
+  recipients in one call (the Pusher API takes 100 channels a call). Groups use the members'
+  own channels, not a shared group channel: a shared channel can't be revoked from someone
+  kicked, while this way they stop hearing the group at once.
 - Live events implement `ShouldBroadcastNow`: sent to Reverb during the request (~15 ms
   round trip). Queued broadcasts waited up to a second for the worker's next poll.
 - SQLite transactions are `IMMEDIATE`: deferred ones failed with "database is locked" under

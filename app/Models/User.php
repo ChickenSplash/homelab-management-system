@@ -41,6 +41,11 @@ class User extends Authenticatable
         static::deleting(function (User $user) {
             $user->tokens()->delete();
             $user->leftBehind = $user->contacts()->all();
+
+            // Leave groups properly, so ownership passes on and the others see them go.
+            $user->memberships()->with('conversation')->get()
+                ->filter(fn (ConversationMember $m) => $m->conversation?->isGroup())
+                ->each(fn (ConversationMember $m) => $m->conversation->removeMember($user));
         });
 
         // Friendships and memberships cascade in the database. A DM nobody is left in goes too;
@@ -86,7 +91,8 @@ class User extends Authenticatable
     }
 
     /**
-     * Everyone with a friendship, request or DM with this user.
+     * Everyone with a friendship, request or DM with this user. Group members are not
+     * contacts: they hear about a departure from the group itself.
      *
      * @return Collection<int, User>
      */
@@ -94,7 +100,9 @@ class User extends Authenticatable
     {
         $ids = Friendship::involving($this)->get(['requester_id', 'addressee_id'])
             ->flatMap(fn (Friendship $f) => [$f->requester_id, $f->addressee_id])
-            ->merge(ConversationMember::whereIn('conversation_id', $this->memberships()->select('conversation_id'))->pluck('user_id'))
+            ->merge(ConversationMember::whereIn('conversation_id', $this->memberships()
+                ->whereHas('conversation', fn ($q) => $q->where('type', 'dm'))
+                ->select('conversation_id'))->pluck('user_id'))
             ->reject(fn (int $id) => $id === $this->id)
             ->unique();
 

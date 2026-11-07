@@ -4,46 +4,39 @@ namespace App\Http\Controllers;
 
 use App\Models\ChatMessage;
 use App\Models\Conversation;
-use App\Models\ConversationMember;
-use App\Models\User;
 use App\Support\Live;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
 
-// DMs now, groups later. Every live update goes to each member's own user channel, so a
-// browser holds one subscription however many conversations it has.
+// What DMs and groups share: listing, messages and read markers. Every live update goes to
+// each member's own user channel, so a browser holds one subscription however many
+// conversations it has, and someone removed from a group stops hearing it at once.
 class ConversationController
 {
     private const PAGE_SIZE = 50;
 
-    /** Your DMs, most recent first. A DM nobody has written in yet only shows to whoever opened it. */
+    /**
+     * Your DMs and groups, most recent first. A DM nobody has written in yet only shows to
+     * whoever opened it.
+     */
     public function index(Request $request): JsonResponse
     {
         $me = $request->user();
 
-        $conversations = $this->withUnreadCount(Conversation::withMember($me), $me)
-            ->where(fn ($q) => $q->whereNotNull('last_message_at')->orWhere('created_by', $me->id))
-            ->with('members.user', 'lastMessage.user')
+        $conversations = Conversation::withMember($me)->forViewer($me)
+            ->where(fn ($q) => $q->where('type', 'group')->orWhereNotNull('last_message_at')->orWhere('created_by', $me->id))
             ->orderByRaw('coalesce(last_message_at, created_at) desc')
             ->orderByDesc('id')
             ->get();
 
-        return response()->json($conversations->map(fn (Conversation $c) => $this->present($c, $me)));
+        return response()->json($conversations->map(fn (Conversation $c) => $c->presentFor($me)));
     }
 
     public function show(Request $request, int $conversation): JsonResponse
     {
-        $me = $request->user();
-        $found = $this->withUnreadCount(Conversation::whereKey($conversation), $me)
-            ->with('members.user', 'lastMessage.user')
-            ->firstOrFail();
-
-        $found->membershipOf($me);
-
-        return response()->json($this->present($found, $me));
+        return response()->json(Conversation::viewFor($conversation, $request->user()));
     }
 
     /** Find or start the DM with someone, by their ID. */
@@ -132,20 +125,27 @@ class ConversationController
         });
 
         $payload = $message->setRelation('user', $me)->toPublicArray();
-        Live::to($this->users($conversation), 'message.sent', $payload);
+        Live::to($conversation->memberUsers(), 'message.sent', $payload);
 
         return response()->json($payload, 201);
     }
 
-    /** Only your own messages, for now. Moderators deleting others' comes with groups. */
+    /** Your own messages anywhere; in a group, mods and above can also delete lower ranks'. */
     public function deleteMessage(Request $request, Conversation $conversation, ChatMessage $message): Response
     {
-        $conversation->membershipOf($request->user());
-        abort_unless($message->user_id === $request->user()->id, 403, 'You can only delete your own messages.');
+        $me = $request->user();
+        $member = $conversation->membershipOf($me);
+        abort_if($message->type === 'system', 403, "System messages can't be deleted.");
+
+        if ($message->user_id !== $me->id) {
+            $author = $conversation->members->firstWhere('user_id', $message->user_id);
+            abort_unless($conversation->isGroup() && $member->atLeast('mod') && $member->outranks($author),
+                403, "You can't delete this message.");
+        }
 
         $message->delete();
 
-        Live::to($this->users($conversation), 'message.deleted', [
+        Live::to($conversation->memberUsers(), 'message.deleted', [
             'conversation_id' => $conversation->id,
             'id' => $message->id,
         ]);
@@ -169,42 +169,5 @@ class ConversationController
         }
 
         return response()->noContent();
-    }
-
-    /** @return array<string, mixed> */
-    private function present(Conversation $conversation, User $me): array
-    {
-        $partner = $conversation->partnerOf($me);
-
-        return [
-            'id' => $conversation->id,
-            'type' => $conversation->type,
-            'user' => $partner?->toPublicArray(),
-            'blocked' => $partner ? $me->blockedEitherWay($partner) : false,
-            'last_message' => $conversation->lastMessage?->toPublicArray(),
-            'last_read_message_id' => $conversation->membershipOf($me)->last_read_message_id,
-            'unread_count' => (int) $conversation->unread_count,
-        ];
-    }
-
-    /**
-     * @param  Builder<Conversation>  $query
-     * @return Builder<Conversation>
-     */
-    private function withUnreadCount(Builder $query, User $me): Builder
-    {
-        return $query->select('conversations.*')->addSelect(['unread_count' => ChatMessage::selectRaw('count(*)')
-            ->whereColumn('chat_messages.conversation_id', 'conversations.id')
-            ->where(fn ($q) => $q->whereNull('chat_messages.user_id')->orWhere('chat_messages.user_id', '!=', $me->id))
-            ->where('chat_messages.id', '>', ConversationMember::selectRaw('coalesce(max(last_read_message_id), 0)')
-                ->whereColumn('conversation_members.conversation_id', 'conversations.id')
-                ->where('conversation_members.user_id', $me->id)),
-        ]);
-    }
-
-    /** @return iterable<User> */
-    private function users(Conversation $conversation): iterable
-    {
-        return $conversation->members()->with('user')->get()->pluck('user');
     }
 }

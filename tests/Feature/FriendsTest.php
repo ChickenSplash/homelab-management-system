@@ -29,7 +29,7 @@ class FriendsTest extends TestCase
     private function told(User $user): bool
     {
         return Event::dispatched(LiveUpdate::class,
-            fn (LiveUpdate $e) => $e->recipient === $user->public_id && $e->name === 'friends.changed')->isNotEmpty();
+            fn (LiveUpdate $e) => $e->reaches($user) && $e->name === 'friends.changed')->isNotEmpty();
     }
 
     private function friendsOf(User $user): array
