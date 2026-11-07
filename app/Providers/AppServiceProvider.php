@@ -2,8 +2,10 @@
 
 namespace App\Providers;
 
-use App\Models\User;
-use Illuminate\Support\Facades\Gate;
+use App\Support\ClientIp;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -13,13 +15,17 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        // Anyone can register, so contact messages are for the one account whose email
-        // matches ADMIN_EMAIL. Emails are unique, so nobody else can claim that address
-        // once the admin has registered with it.
-        Gate::define('read-messages', function (User $user): bool {
-            $admin = config('app.admin_email');
+        RateLimiter::for('contact', fn (Request $request) => Limit::perMinute(5)->by(ClientIp::of($request)));
 
-            return filled($admin) && strcasecmp($user->email, $admin) === 0;
-        });
+        // Logging in and registering: enough for typos, not for guessing passwords.
+        RateLimiter::for('auth', fn (Request $request) => Limit::perMinute(10)->by(ClientIp::of($request)));
+
+        // Anyone can become a guest without a password, so cap how fast one address mints them.
+        RateLimiter::for('guest', fn (Request $request) => [
+            Limit::perMinute(3)->by(ClientIp::of($request)),
+            Limit::perDay(30)->by(ClientIp::of($request)),
+        ]);
+
+        RateLimiter::for('ping', fn (Request $request) => Limit::perMinute(10)->by($request->user()?->id ?: ClientIp::of($request)));
     }
 }

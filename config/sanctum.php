@@ -2,24 +2,37 @@
 
 /*
 | Only the keys that differ from Sanctum's own defaults are here; the package
-| merges the rest in. The ones left out (`stateful`, `middleware`) exist for
-| first-party SPAs authenticating by cookie, and there is no SPA here.
+| merges the rest in.
 */
 
 return [
 
     /*
     |--------------------------------------------------------------------------
-    | Sanctum Guards
+    | Stateful Domains
     |--------------------------------------------------------------------------
     |
-    | Empty, so the API is bearer tokens and nothing else. Sanctum would
-    | otherwise fall back to the `web` guard and let a logged-in browser
-    | session through -- and the API routes carry no CSRF token, so any
-    | other site could then post a project on a signed-in user's behalf.
+    | Browser apps on these hosts sign in with a session cookie and must send
+    | the XSRF-TOKEN back. Requests from anywhere else (the portfolio's contact
+    | form, scripts) get no session, so a signed-in browser cannot be used
+    | against the API from another site.
     |
     */
 
-    'guard' => [],
+    'stateful' => array_filter(explode(',', (string) env(
+        'SANCTUM_STATEFUL_DOMAINS',
+        'localhost,localhost:5173,127.0.0.1,127.0.0.1:5173',
+    ))),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Sanctum Guards
+    |--------------------------------------------------------------------------
+    |
+    | A session from a stateful domain counts; everything else needs a bearer token.
+    |
+    */
+
+    'guard' => ['web'],
 
 ];

@@ -1,50 +1,109 @@
+name: hms
+
+# Shared by every service: same image, same settings, same database volume.
+x-app: &app
+    image: hms:latest
+    pull_policy: never
+    environment: &env
+        APP_NAME: HMS
+        APP_ENV: production
+        APP_DEBUG: 'false'
+        # Only used for links generated outside a request.
+        APP_URL: '${APP_URL:-http://hms:3000}'
+        APP_KEY: '${APP_KEY:-}'
+        DB_CONNECTION: sqlite
+        DB_DATABASE: /app/data/database.sqlite
+        # 30 days. A guest's account lasts as long as their session.
+        SESSION_DRIVER: database
+        SESSION_LIFETIME: 43200
+        SESSION_SECURE_COOKIE: 'true'
+        CACHE_STORE: database
+        QUEUE_CONNECTION: database
+        # Browser apps that sign in with a session cookie (comma separated hosts).
+        SANCTUM_STATEFUL_DOMAINS: '${SANCTUM_STATEFUL_DOMAINS:-chat.chickensplash.dpdns.org}'
+        # Reverb: the API and the queue publish to hms-reverb over the edge network;
+        # browsers reach it through their app's own nginx at /app.
+        BROADCAST_CONNECTION: reverb
+        REVERB_APP_ID: hms
+        REVERB_APP_KEY: '${REVERB_APP_KEY:?set REVERB_APP_KEY in .env}'
+        REVERB_APP_SECRET: '${REVERB_APP_SECRET:?set REVERB_APP_SECRET in .env}'
+        REVERB_HOST: hms-reverb
+        REVERB_PORT: 8080
+        REVERB_SCHEME: http
+        REVERB_ALLOWED_ORIGINS: '${REVERB_ALLOWED_ORIGINS:-chat.chickensplash.dpdns.org}'
+        # Contact form messages are mailed to ADMIN_EMAIL.
+        # Until MAIL_MAILER=smtp is set, the mail only goes to the container log.
+        ADMIN_EMAIL: '${ADMIN_EMAIL:-}'
+        MAIL_MAILER: '${MAIL_MAILER:-log}'
+        MAIL_SCHEME: smtps
+        MAIL_HOST: smtp.gmail.com
+        MAIL_PORT: 465
+        MAIL_USERNAME: '${MAIL_USERNAME:-}'
+        MAIL_PASSWORD: '${MAIL_PASSWORD:-}'
+        MAIL_FROM_ADDRESS: '${MAIL_USERNAME:-hello@example.com}'
+        MAIL_FROM_NAME: 'Portfolio'
+        LOG_CHANNEL: stderr
+    volumes:
+        # Not /app/database: a volume there hides any migration added after it was created.
+        - database:/app/data
+    networks:
+        - edge
+    restart: unless-stopped
+
 services:
-    app:
+    # The API. No published port: only the tunnel and other edge containers reach it,
+    # which is what makes CF-Connecting-IP trustworthy for rate limits.
+    hms:
+        <<: *app
         build: .
-        container_name: project-panel
-        hostname: project-panel
-        # Published so you can still reach it directly at http://project-panel:3000.
-        # Drop this block if the tunnel should be the only way in.
-        ports:
-            - '3000:3000'
+        container_name: hms
+        hostname: hms
         environment:
-            APP_NAME: 'Projects Panel'
-            APP_ENV: production
-            APP_DEBUG: 'false'
-            # Set this to the public tunnel URL, e.g. https://projects.example.com. It is only
-            # used for links generated outside a request; normal requests use the forwarded host.
-            APP_URL: '${APP_URL:-http://project-panel:3000}'
-            APP_KEY: '${APP_KEY:-}'
-            DB_CONNECTION: sqlite
-            DB_DATABASE: /app/data/database.sqlite
-            SESSION_DRIVER: database
-            CACHE_STORE: database
-            QUEUE_CONNECTION: sync
-            # Contact form messages: readable by the account with ADMIN_EMAIL and mailed to it.
-            # Until MAIL_MAILER=smtp is set, the mail only goes to the container log.
-            ADMIN_EMAIL: '${ADMIN_EMAIL:-}'
-            MAIL_MAILER: '${MAIL_MAILER:-log}'
-            MAIL_SCHEME: smtps
-            MAIL_HOST: smtp.gmail.com
-            MAIL_PORT: 465
-            MAIL_USERNAME: '${MAIL_USERNAME:-}'
-            MAIL_PASSWORD: '${MAIL_PASSWORD:-}'
-            MAIL_FROM_ADDRESS: '${MAIL_USERNAME:-hello@example.com}'
-            MAIL_FROM_NAME: 'Portfolio'
-            LOG_CHANNEL: stderr
-        volumes:
-            # Not /app/database: a volume there hides any migration added after it was created.
-            - database:/app/data
-        networks:
-            - edge
-        restart: unless-stopped
+            <<: *env
+            RUN_MIGRATIONS: 'true'
+        healthcheck:
+            test: ['CMD', 'curl', '-fsS', '-o', '/dev/null', 'http://127.0.0.1:3000/up']
+            interval: 30s
+            timeout: 5s
+            start_period: 30s
+
+    hms-reverb:
+        <<: *app
+        container_name: hms-reverb
+        hostname: hms-reverb
+        command: ['php', 'artisan', 'reverb:start', '--host=0.0.0.0', '--port=8080']
+        # The image's own check probes Caddy, which only runs in the API container.
+        healthcheck:
+            disable: true
+        depends_on:
+            hms:
+                condition: service_healthy
+
+    hms-queue:
+        <<: *app
+        container_name: hms-queue
+        command: ['php', 'artisan', 'queue:work', '--sleep=1', '--tries=3', '--max-time=3600']
+        healthcheck:
+            disable: true
+        depends_on:
+            hms:
+                condition: service_healthy
+
+    hms-scheduler:
+        <<: *app
+        container_name: hms-scheduler
+        command: ['php', 'artisan', 'schedule:work']
+        healthcheck:
+            disable: true
+        depends_on:
+            hms:
+                condition: service_healthy
 
 volumes:
     database:
 
 networks:
-    # Created by the cloudflared stack. Point the tunnel's public hostname at
-    # http://project-panel:3000 -- cloudflared resolves that name on this network.
+    # Created by the cloudflared stack.
     edge:
         name: edge
         external: true

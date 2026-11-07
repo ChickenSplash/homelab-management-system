@@ -6,4 +6,4 @@ Subject: {{ $contact->subject }}
 {{ $contact->body }}
 
 --
-Reply to this email to answer them, or read it at {{ route('messages') }}
+Reply to this email to answer them.

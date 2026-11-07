@@ -16,9 +16,15 @@ if [ "${DB_CONNECTION:-sqlite}" = "sqlite" ]; then
     touch "$DB_DATABASE"
 fi
 
-php artisan migrate --force --graceful
+# Only the API container migrates; the others wait for it to report healthy,
+# so four containers never race on the same SQLite file.
+if [ "${RUN_MIGRATIONS:-false}" = "true" ]; then
+    php artisan migrate --force --graceful
+fi
+
 php artisan config:cache
 php artisan route:cache
 php artisan view:cache
+php artisan event:cache
 
 exec "$@"

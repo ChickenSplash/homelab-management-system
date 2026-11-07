@@ -3,11 +3,8 @@
 namespace Tests\Feature;
 
 use App\Mail\ContactMessageReceived;
-use App\Models\Message;
-use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
-use Livewire\Volt\Volt;
 use Tests\TestCase;
 
 class ContactTest extends TestCase
@@ -32,16 +29,6 @@ class ContactTest extends TestCase
             'subject' => 'Hello',
             'message' => 'I like your site.',
         ];
-    }
-
-    private function admin(): User
-    {
-        return User::factory()->create(['email' => self::ADMIN]);
-    }
-
-    private function contactMessage(): Message
-    {
-        return Message::create(['email' => 'visitor@example.com', 'subject' => 'Hello', 'body' => 'Hi there']);
     }
 
     public function test_a_message_is_stored_and_emailed_to_the_admin(): void
@@ -101,51 +88,26 @@ class ContactTest extends TestCase
         $this->assertDatabaseCount('messages', 5);
     }
 
-    public function test_only_the_admin_can_open_the_messages_page(): void
+    public function test_the_rate_limit_is_per_cloudflare_client_ip(): void
     {
-        $this->get('/messages')->assertRedirect('/login');
+        for ($i = 0; $i < 5; $i++) {
+            $this->withHeader('CF-Connecting-IP', '203.0.113.1')
+                ->postJson('/api/contact', $this->validMessage())->assertCreated();
+        }
 
-        $this->actingAs(User::factory()->create())->get('/messages')->assertForbidden();
+        $this->withHeader('CF-Connecting-IP', '203.0.113.1')
+            ->postJson('/api/contact', $this->validMessage())->assertTooManyRequests();
 
-        $this->contactMessage();
+        $this->withHeader('CF-Connecting-IP', '203.0.113.2')
+            ->postJson('/api/contact', $this->validMessage())->assertCreated();
 
-        $this->actingAs($this->admin())->get('/messages')
-            ->assertOk()
-            ->assertSee('Hello')
-            ->assertSee('Hi there');
+        $this->assertDatabaseHas('messages', ['ip' => '203.0.113.2']);
     }
 
-    public function test_the_messages_tab_only_shows_for_the_admin(): void
+    public function test_the_form_gets_no_session(): void
     {
-        $this->actingAs(User::factory()->create())->get('/')->assertDontSee('Messages');
-
-        $this->actingAs($this->admin())->get('/')->assertSee('Messages');
-    }
-
-    public function test_the_admin_can_mark_read_and_delete_messages(): void
-    {
-        $message = $this->contactMessage();
-
-        $page = Volt::actingAs($this->admin())->test('messages');
-
-        $page->call('toggleRead', $message->id);
-        $this->assertNotNull($message->fresh()->read_at);
-
-        $page->call('toggleRead', $message->id);
-        $this->assertNull($message->fresh()->read_at);
-
-        $page->call('delete', $message->id);
-        $this->assertDatabaseCount('messages', 0);
-    }
-
-    public function test_other_users_cannot_run_the_page_actions(): void
-    {
-        $message = $this->contactMessage();
-
-        Volt::actingAs(User::factory()->create())
-            ->test('messages')
-            ->assertForbidden();
-
-        $this->assertDatabaseHas('messages', ['id' => $message->id]);
+        $this->postJson('/api/contact', $this->validMessage())
+            ->assertCreated()
+            ->assertCookieMissing(config('session.cookie'));
     }
 }
