@@ -19,9 +19,7 @@ class UserResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'id' => $this->public_id,
-            'display_name' => $this->display_name,
-            'is_guest' => $this->is_guest,
+            ...$this->resource->toPublicArray(),
             'email' => $this->when($request->user()?->is($this->resource), $this->email),
         ];
     }

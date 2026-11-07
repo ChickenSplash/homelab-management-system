@@ -2,11 +2,14 @@
 
 namespace App\Models;
 
+use App\Support\Live;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Support\Facades\DB;
 use Laravel\Sanctum\HasApiTokens;
@@ -25,6 +28,9 @@ class User extends Authenticatable
 
     private const PUBLIC_ID_LENGTH = 8;
 
+    /** @var array<int, User> Friends and DM partners to tell once this user is deleted. */
+    private array $leftBehind = [];
+
     protected static function booted(): void
     {
         static::creating(function (User $user) {
@@ -34,6 +40,15 @@ class User extends Authenticatable
         // Tokens hang off a morph relation, which has no foreign key to cascade.
         static::deleting(function (User $user) {
             $user->tokens()->delete();
+            $user->leftBehind = $user->contacts()->all();
+        });
+
+        // Friendships and memberships cascade in the database. A DM nobody is left in goes too;
+        // one with a survivor stays, its messages shown from "Deleted user".
+        static::deleted(function (User $user) {
+            Conversation::doesntHave('members')->delete();
+            Live::to($user->leftBehind, 'friends.changed');
+            Live::to($user->leftBehind, 'conversations.changed');
         });
     }
 
@@ -48,6 +63,48 @@ class User extends Authenticatable
         } while (DB::table('users')->where('public_id', $id)->exists());
 
         return $id;
+    }
+
+    /** What anyone may see about a user. */
+    public function toPublicArray(): array
+    {
+        return [
+            'id' => $this->public_id,
+            'display_name' => $this->display_name,
+            'is_guest' => $this->is_guest,
+        ];
+    }
+
+    public function hasBlocked(User $other): bool
+    {
+        return Block::where(['blocker_id' => $this->id, 'blocked_id' => $other->id])->exists();
+    }
+
+    public function blockedEitherWay(User $other): bool
+    {
+        return $this->hasBlocked($other) || $other->hasBlocked($this);
+    }
+
+    /**
+     * Everyone with a friendship, request or DM with this user.
+     *
+     * @return Collection<int, User>
+     */
+    public function contacts(): Collection
+    {
+        $ids = Friendship::involving($this)->get(['requester_id', 'addressee_id'])
+            ->flatMap(fn (Friendship $f) => [$f->requester_id, $f->addressee_id])
+            ->merge(ConversationMember::whereIn('conversation_id', $this->memberships()->select('conversation_id'))->pluck('user_id'))
+            ->reject(fn (int $id) => $id === $this->id)
+            ->unique();
+
+        return User::whereIn('id', $ids)->get();
+    }
+
+    /** @return HasMany<ConversationMember, $this> */
+    public function memberships(): HasMany
+    {
+        return $this->hasMany(ConversationMember::class);
     }
 
     /**

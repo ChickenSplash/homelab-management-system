@@ -26,6 +26,12 @@ class AppServiceProvider extends ServiceProvider
             Limit::perDay(30)->by(ClientIp::of($request)),
         ]);
 
+        // Sending friend requests or opening DMs by ID. IDs are too many to guess, this just slows a spammer.
+        RateLimiter::for('find-users', fn (Request $request) => Limit::perMinute(30)->by($request->user()?->id ?: ClientIp::of($request)));
+
+        // About one message a second, with room for a quick burst.
+        RateLimiter::for('messages', fn (Request $request) => Limit::perSecond(10, 10)->by($request->user()?->id ?: ClientIp::of($request)));
+
         RateLimiter::for('ping', fn (Request $request) => Limit::perMinute(10)->by($request->user()?->id ?: ClientIp::of($request)));
     }
 }

@@ -2,6 +2,8 @@
 
 use App\Events\Ping;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\ConversationController;
+use App\Http\Controllers\FriendController;
 use App\Mail\ContactMessageReceived;
 use App\Models\Message;
 use App\Support\ClientIp;
@@ -23,6 +25,29 @@ Route::prefix('auth')->controller(AuthController::class)->group(function () {
         Route::get('/me', 'me');
         Route::patch('/me', 'update');
         Route::put('/password', 'updatePassword')->middleware('throttle:auth');
+    });
+});
+
+Route::middleware('auth:sanctum')->group(function () {
+    Route::controller(FriendController::class)->group(function () {
+        Route::get('/friends', 'index');
+        Route::post('/friends', 'store')->middleware('throttle:find-users');
+        Route::post('/friends/{publicId}/accept', 'accept');
+        Route::delete('/friends/{publicId}', 'destroy');
+
+        Route::get('/blocks', 'blocks');
+        Route::put('/blocks/{publicId}', 'block');
+        Route::delete('/blocks/{publicId}', 'unblock');
+    });
+
+    Route::controller(ConversationController::class)->group(function () {
+        Route::post('/dms', 'openDm')->middleware('throttle:find-users');
+        Route::get('/conversations', 'index');
+        Route::get('/conversations/{conversation}', 'show')->whereNumber('conversation');
+        Route::get('/conversations/{conversation}/messages', 'messages');
+        Route::post('/conversations/{conversation}/messages', 'send')->middleware('throttle:messages');
+        Route::delete('/conversations/{conversation}/messages/{message}', 'deleteMessage')->scopeBindings();
+        Route::post('/conversations/{conversation}/read', 'read');
     });
 });
 

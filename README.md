@@ -76,8 +76,21 @@ Sign-in flow: `GET /sanctum/csrf-cookie`, then send the `XSRF-TOKEN` cookie back
 | `GET` / `PATCH` | `/api/auth/me` | Current user; change `display_name` |
 | `PUT` | `/api/auth/password` | `current_password`, `password`, `password_confirmation` (not for guests) |
 | `GET` | `/api/realtime` | Reverb app key for the WebSocket client |
-| `POST` | `/api/broadcasting/auth` | Private channel auth (`private-user.{id}`) |
+| `POST` | `/api/broadcasting/auth` | Private channel auth (`private-user.{id}`). Events on it: `ping`, `friends.changed`, `message.sent`, `message.deleted`, `conversation.read`, `conversations.changed` |
 | `POST` | `/api/ping` | Broadcasts a `ping` to your own channel |
+| `GET` | `/api/friends` | Friends and requests: `[{user, status: friend/incoming/outgoing, since}]` |
+| `POST` | `/api/friends` | `id`: send a request (accepts at once if they already asked you) |
+| `POST` | `/api/friends/{id}/accept` | Accept an incoming request |
+| `DELETE` | `/api/friends/{id}` | Decline, cancel or unfriend |
+| `GET` | `/api/blocks` | People you have blocked |
+| `PUT` / `DELETE` | `/api/blocks/{id}` | Block (also unfriends) / unblock. Blocking is silent |
+| `POST` | `/api/dms` | `id`: find or start the DM with someone |
+| `GET` | `/api/conversations` | Your DMs with the other user, last message and `unread_count` |
+| `GET` | `/api/conversations/{c}` | One conversation |
+| `GET` | `/api/conversations/{c}/messages` | 50 messages, oldest first; `?before={messageId}` pages back |
+| `POST` | `/api/conversations/{c}/messages` | `body` (max 2,000), `nonce` (client temp ID; a retry returns the saved copy) |
+| `DELETE` | `/api/conversations/{c}/messages/{m}` | Delete your own message |
+| `POST` | `/api/conversations/{c}/read` | `message_id`: move your read marker forward |
 | `POST` | `/api/contact` | Portfolio contact form: `email`, `subject`, `message` (5 a minute per IP) |
 
 Users are identified by `id`, a random 8 character public ID. Display names are free text and

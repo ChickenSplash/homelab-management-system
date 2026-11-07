@@ -56,10 +56,11 @@ portfolio / glassbox ──/api/contact──► hms
 
 - **users**: `id`, `public_id` (unique, 8 chars), `display_name`, `email` (nullable, unique),
   `password` (nullable), `is_guest`, timestamps
-- **friendships**: `requester_id`, `addressee_id`, `status` (pending / accepted / blocked), one row per pair
-- **conversations**: `type` (dm / group), `name`, `visibility` (public / private), `invite_code`, `created_by`
+- **friendships**: `requester_id`, `addressee_id`, `accepted_at` (null while pending), one row per pair
+- **blocks**: `blocker_id`, `blocked_id`. Separate from friendships: blocks are one-way and two people can block each other
+- **conversations**: `type` (dm / group), `dm_key` (one DM per pair), `created_by`, `last_message_at`; groups add `name`, `visibility`, `invite_code` in phase 4
 - **conversation_members**: `conversation_id`, `user_id`, `role` (owner / admin / moderator / member), `last_read_message_id`
-- **chat_messages**: `conversation_id`, `user_id`, `body`, `edited_at`, soft deletes
+- **chat_messages**: `conversation_id`, `user_id` (null once the author is deleted), `body`, `nonce`, `edited_at`, soft deletes
 - **messages**: unchanged, the portfolio contact form
 
 DMs are two-member conversations, so DMs and groups share one message and real-time path.
@@ -115,7 +116,7 @@ Enforced with Laravel Policies, with a test per rule.
 - [x] New repo `~/Projects/Apps/chat-ui`: Vite + React + TS + Tailwind 4, dev proxy to a local HMS
 - [x] nginx container on `edge` proxying to `hms` and `hms-reverb`
 - [x] Placeholder page: log in / register / join as guest, shows "connected as <name> (#public_id)", live ping round trip
-- [ ] Tunnel hostname `chat.chickensplash.dpdns.org` → `http://chat-ui:80` (Cloudflare dashboard, by hand)
+- [x] Tunnel hostname `chat.chickensplash.dpdns.org` → `http://chat-ui:80` (Cloudflare dashboard, by hand)
 
 **Done when**: the contact form still delivers, and the chat placeholder logs in (user or guest)
 and receives a live ping.
@@ -126,23 +127,40 @@ and receives a live ping.
 - [x] Playwright e2e tests (Chromium + Firefox) in chat-ui, run against a local Docker copy of the stack
 
 ### Phase 2 · Friends
-- Find users by `public_id`, request, accept, decline, remove, block
+- [x] Request by `public_id` (exact ID only, no name search), accept, decline, cancel, unfriend
+- [x] Asking someone who already asked you makes you friends at once
+- [x] Block / unblock: silent (requests look sent but never arrive), and blocking unfriends
+- [x] Live `friends.changed` events; incoming request badge
+- [x] Guests can use friends; their friendships go when they log out
+- [x] Discord-style layout: server rail, sidebar (Friends, DMs, user panel), main panel; dark only for now
+- Online status waits for phase 5
 
 ### Phase 3 · DMs
-- Start a DM with anyone, real-time messages, history paging, unread counts
+- [x] Start a DM with anyone (from the friends list, or by ID in the sidebar)
+- [x] Live messages over each member's user channel; history in pages of 50
+- [x] Send receipts: a message shows grey until HMS saves it, red with Retry / Discard if it fails;
+  the client `nonce` stops duplicates on retry and when the WebSocket copy arrives first
+- [x] Unread badges per DM, on the rail and in the tab title; no "seen" receipts
+- [x] Delete your own messages; plain text with clickable links; 2,000 character limit
+- [x] Rate limit 10 messages per 10 seconds; blocked either way means no messages either way
+- [x] A deleted guest's messages stay, shown from "Deleted user"; a DM with nobody left is removed
+- [x] Playwright: two browsers befriend, chat, delete, fail and retry a send, and block
 
 ### Phase 4 · Groups
 - Create (creator is owner), public / private, invite links, browse public groups
 - Roles, kick, leave (with last-admin hand-over)
 
 ### Phase 5 · Polish
-- Online presence, typing indicator, message rate limits, Playwright e2e tests (run on `HDMI-A-1`)
+- Online presence, typing indicator, unread divider, mobile layout
+- Playwright e2e tests grow with each phase (headless)
 
 ### Phase 6 · Later
 - Edits, replies, reactions, attachments (maybe via copyparty), custom handles, voice
 
 ## Notes
 
+- Live events go through `App\Support\Live`, which broadcasts `LiveUpdate` to each user's
+  private channel and reports (never throws) if Reverb is down.
 - Live events implement `ShouldBroadcastNow`: sent to Reverb during the request (~15 ms
   round trip). Queued broadcasts waited up to a second for the worker's next poll.
 - SQLite transactions are `IMMEDIATE`: deferred ones failed with "database is locked" under
