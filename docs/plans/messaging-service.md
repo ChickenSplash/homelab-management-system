@@ -82,7 +82,7 @@ Enforced with Laravel Policies, with a test per rule.
 **1. Rename and clone**
 - [x] Rename GitHub repo `projects-panel` → `homelab-management-system`
 - [x] Clone to `~/Projects/Apps/homelab-management-system`
-- [ ] Homelab: rename `~/homelab/projects-panel` → `~/homelab/hms`, update its git remote
+- [x] Homelab: rename `~/homelab/projects-panel` → `~/homelab/hms`, update its git remote
 - [x] Compose project `hms`; services `hms`, `hms-reverb`, `hms-queue`, `hms-scheduler`; README renamed
 
 **2. Strip to an API**
@@ -106,10 +106,10 @@ Enforced with Laravel Policies, with a test per rule.
 
 **9. Runtime and cut-over**
 - [x] Dockerfile on FrankenPHP + Octane; compose with the four services
-- [ ] Copy volume `projects-panel_database` → `hms_database` (old volume kept as a backup)
-- [ ] `project-panel:3000` → `hms:3000` in `glassbox/server.js` and `portfolio/nginx.conf`, restart both
+- [x] Copy volume `projects-panel_database` → `hms_database` (old volume kept as a backup)
+- [x] `project-panel:3000` → `hms:3000` in `glassbox/server.js` and `portfolio/nginx.conf`, restart both
 - [ ] Remove the `chickensplash.dpdns.org` tunnel hostname (Cloudflare dashboard, by hand)
-- [ ] Update the homelab skill file
+- [x] Update the homelab skill file
 
 **10 to 13. Chat front end**
 - [ ] New repo `~/Projects/Apps/chat-ui`: Vite + React + TS + Tailwind 4, dev proxy to a local HMS
