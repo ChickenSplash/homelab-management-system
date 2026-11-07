@@ -185,6 +185,22 @@ class DirectMessagesTest extends TestCase
         Event::assertDispatched(LiveUpdate::class, fn (LiveUpdate $e) => $e->reaches($this->them) && $e->name === 'message.deleted' && $e->payload['id'] === $mine);
     }
 
+    public function test_a_deleted_messages_text_is_wiped_from_the_database(): void
+    {
+        $dm = $this->openDm();
+        $id = $this->send($dm, 'something regrettable')->json('id');
+        $this->actingAs($this->me)->postJson("/api/conversations/{$dm}/messages", ['body' => 'quoting it', 'reply_to_message_id' => $id])->assertCreated();
+
+        $this->actingAs($this->me)->deleteJson("/api/conversations/{$dm}/messages/{$id}")->assertNoContent();
+
+        $this->assertSame(ChatMessage::DELETED_BODY, ChatMessage::withTrashed()->find($id)->body);
+        $this->assertDatabaseMissing('chat_messages', ['body' => 'something regrettable']);
+        $messages = $this->actingAs($this->them)->getJson("/api/conversations/{$dm}/messages")->json('data');
+        $reply = collect($messages)->firstWhere('body', 'quoting it')['reply_to'];
+        $this->assertTrue($reply['deleted']);
+        $this->assertNull($reply['body']);
+    }
+
     public function test_a_message_id_from_another_conversation_is_not_found(): void
     {
         $dm = $this->openDm();

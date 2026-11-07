@@ -13,6 +13,17 @@ class ChatMessage extends Model
 {
     use SoftDeletes;
 
+    /** What a deleted message's text becomes. The original is not kept anywhere. */
+    public const DELETED_BODY = '[message deleted]';
+
+    protected static function booted(): void
+    {
+        // A soft delete only writes deleted_at, so the text is wiped in a second save.
+        static::softDeleted(function (ChatMessage $message) {
+            $message->forceFill(['body' => self::DELETED_BODY])->saveQuietly();
+        });
+    }
+
     /** @return BelongsTo<User, $this> */
     public function user(): BelongsTo
     {

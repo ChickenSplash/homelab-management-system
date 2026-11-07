@@ -241,7 +241,8 @@ and receives a live ping.
   concurrent writes instead of waiting out `busy_timeout`.
 - No PHP on the PC: run composer and tests in a `composer:2` container (Docker Desktop locally).
 - To test the whole stack locally, run HMS, Reverb, the queue and chat-ui with Docker Compose,
-  with `SANCTUM_STATEFUL_DOMAINS=localhost:8090`, then `BASE_URL=http://localhost:8090 npx playwright test`.
+  with `SANCTUM_STATEFUL_DOMAINS=localhost:8090` and `REVERB_ALLOWED_ORIGINS=localhost` (Reverb
+  matches the origin's host without its port), then `BASE_URL=http://localhost:8090 npx playwright test`.
 
 - Messages are stored readable on the server; this is not end-to-end encrypted.
 - Guests that close the tab without logging out are removed once their session expires.
