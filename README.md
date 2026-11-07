@@ -21,7 +21,7 @@ One image, four services on the external `edge` network:
 | `hms` | The HTTP API on port 3000. Runs migrations on start |
 | `hms-reverb` | WebSocket server on port 8080 |
 | `hms-queue` | Background jobs (broadcasts) |
-| `hms-scheduler` | Timed jobs (`guests:prune`, hourly) |
+| `hms-scheduler` | Timed jobs (`guests:prune` hourly, `presence:sync` every minute) |
 
 No port is published, so only the tunnel and other `edge` containers can reach them.
 
@@ -76,7 +76,7 @@ Sign-in flow: `GET /sanctum/csrf-cookie`, then send the `XSRF-TOKEN` cookie back
 | `GET` / `PATCH` | `/api/auth/me` | Current user; change `display_name` |
 | `PUT` | `/api/auth/password` | `current_password`, `password`, `password_confirmation` (not for guests) |
 | `GET` | `/api/realtime` | Reverb app key for the WebSocket client |
-| `POST` | `/api/broadcasting/auth` | Private channel auth (`private-user.{id}`). Events on it: `ping`, `friends.changed`, `message.sent`, `message.deleted`, `conversation.read`, `conversations.changed`. Group messages reach each member here too |
+| `POST` | `/api/broadcasting/auth` | Private channel auth (`private-user.{id}`). Events on it: `ping`, `friends.changed`, `message.sent`, `message.deleted`, `conversation.read`, `conversations.changed`, `presence.changed`, `typing`. Group messages reach each member here too |
 | `POST` | `/api/ping` | Broadcasts a `ping` to your own channel |
 | `GET` | `/api/friends` | Friends and requests: `[{user, status: friend/incoming/outgoing, since}]` |
 | `POST` | `/api/friends` | `id`: send a request (accepts at once if they already asked you) |
@@ -91,6 +91,10 @@ Sign-in flow: `GET /sanctum/csrf-cookie`, then send the `XSRF-TOKEN` cookie back
 | `POST` | `/api/conversations/{c}/messages` | `body` (max 2,000), `nonce` (client temp ID; a retry returns the saved copy) |
 | `DELETE` | `/api/conversations/{c}/messages/{m}` | Delete your own message |
 | `POST` | `/api/conversations/{c}/read` | `message_id`: move your read marker forward |
+| `POST` | `/api/conversations/{c}/typing` | Tell the other members you're typing |
+| `GET` | `/api/presence` | Everyone you can see who isn't offline (yourself included): `{public_id: status}` |
+| `POST` | `/api/presence/active` | You did something; ten quiet minutes means idle |
+| `PUT` | `/api/presence/status` | `status`: online / idle / dnd / invisible |
 | `GET` | `/api/groups` | Public groups, biggest first; `?q=` searches names |
 | `POST` | `/api/groups` | `name`, `description`, `visibility` (public / private). You become the owner |
 | `PATCH` / `DELETE` | `/api/groups/{g}` | Edit details (admin+) / delete the group (owner) |

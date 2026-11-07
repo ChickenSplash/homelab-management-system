@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Support\Live;
+use App\Support\Presence;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
@@ -11,6 +12,7 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Support\Collection as BaseCollection;
 use Illuminate\Support\Facades\DB;
 use Laravel\Sanctum\HasApiTokens;
 
@@ -91,6 +93,79 @@ class User extends Authenticatable
     }
 
     /**
+     * People this user has blocked or been blocked by.
+     *
+     * @return BaseCollection<int, int>
+     */
+    public function blockedEitherWayIds(): BaseCollection
+    {
+        return Block::where('blocker_id', $this->id)->pluck('blocked_id')
+            ->merge(Block::where('blocked_id', $this->id)->pluck('blocker_id'))
+            ->unique()
+            ->values();
+    }
+
+    /**
+     * Who sees this user's online status: friends and anyone they share a DM or group with,
+     * unless either has blocked the other.
+     *
+     * @return BaseCollection<int, int>
+     */
+    public function presenceAudienceIds(): BaseCollection
+    {
+        $friends = Friendship::involving($this)->whereNotNull('accepted_at')->get(['requester_id', 'addressee_id'])
+            ->flatMap(fn (Friendship $f) => [$f->requester_id, $f->addressee_id]);
+        $peers = ConversationMember::whereIn('conversation_id', $this->memberships()->select('conversation_id'))->pluck('user_id');
+
+        return $friends->merge($peers)
+            ->unique()
+            ->diff($this->blockedEitherWayIds())
+            ->reject(fn (int $id) => $id === $this->id)
+            ->values();
+    }
+
+    /** What others see: offline while disconnected or invisible, idle after a while without activity. */
+    public function currentPresence(): string
+    {
+        return match (true) {
+            ! $this->connected_at, $this->status === 'invisible' => 'offline',
+            $this->status === 'dnd' => 'dnd',
+            $this->status === 'idle',
+            ! $this->active_at,
+            $this->active_at->lt(now()->subMinutes(Presence::IDLE_AFTER_MINUTES)) => 'idle',
+            default => 'online',
+        };
+    }
+
+    /** Reverb says whether any of their tabs is connected. Arriving counts as activity. */
+    public function markConnected(bool $connected): void
+    {
+        if ($connected && ! $this->connected_at) {
+            $this->connected_at = $this->active_at = now();
+        } elseif (! $connected) {
+            $this->connected_at = null;
+        }
+
+        $this->refreshPresence();
+    }
+
+    /** Save any change, and tell their own tabs and everyone who can see them if it shows. */
+    public function refreshPresence(): void
+    {
+        $presence = $this->currentPresence();
+        $changed = $presence !== $this->presence;
+        $this->presence = $presence;
+        $this->save();
+
+        if ($changed) {
+            Live::to(User::whereIn('id', $this->presenceAudienceIds()->push($this->id))->get(), 'presence.changed', [
+                'id' => $this->public_id,
+                'status' => $presence,
+            ]);
+        }
+    }
+
+    /**
      * Everyone with a friendship, request or DM with this user. Group members are not
      * contacts: they hear about a departure from the group itself.
      *
@@ -144,6 +219,8 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'is_guest' => 'boolean',
+            'connected_at' => 'datetime',
+            'active_at' => 'datetime',
         ];
     }
 }

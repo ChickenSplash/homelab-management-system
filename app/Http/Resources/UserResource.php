@@ -20,7 +20,10 @@ class UserResource extends JsonResource
     {
         return [
             ...$this->resource->toPublicArray(),
-            'email' => $this->when($request->user()?->is($this->resource), $this->email),
+            ...$request->user()?->is($this->resource) ? [
+                'email' => $this->email,
+                'status' => $this->status ?? 'online',
+            ] : [],
         ];
     }
 }

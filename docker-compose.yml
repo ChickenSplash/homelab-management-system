@@ -31,6 +31,8 @@ x-app: &app
         REVERB_PORT: 8080
         REVERB_SCHEME: http
         REVERB_ALLOWED_ORIGINS: '${REVERB_ALLOWED_ORIGINS:-chat.chickensplash.dpdns.org}'
+        # Ping a quiet connection after 20 s, so a dead one shows offline sooner (see AppServiceProvider).
+        REVERB_APP_PING_INTERVAL: 20
         # Contact form messages are mailed to ADMIN_EMAIL.
         # Until MAIL_MAILER=smtp is set, the mail only goes to the container log.
         ADMIN_EMAIL: '${ADMIN_EMAIL:-}'

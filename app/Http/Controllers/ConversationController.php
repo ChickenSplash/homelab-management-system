@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\ChatMessage;
 use App\Models\Conversation;
+use App\Models\User;
 use App\Support\Live;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -128,6 +129,22 @@ class ConversationController
         Live::to($conversation->memberUsers(), 'message.sent', $payload);
 
         return response()->json($payload, 201);
+    }
+
+    /** Tell the others you're typing. Browsers send this every few seconds while you type. */
+    public function typing(Request $request, Conversation $conversation): Response
+    {
+        $me = $request->user();
+        $conversation->membershipOf($me);
+        $blocked = $me->blockedEitherWayIds();
+
+        Live::to(
+            $conversation->memberUsers()->reject(fn (User $u) => $u->is($me) || $blocked->contains($u->id)),
+            'typing',
+            ['conversation_id' => $conversation->id, 'user' => $me->toPublicArray()],
+        );
+
+        return response()->noContent();
     }
 
     /** Your own messages anywhere; in a group, mods and above can also delete lower ranks'. */

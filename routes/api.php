@@ -5,6 +5,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ConversationController;
 use App\Http\Controllers\FriendController;
 use App\Http\Controllers\GroupController;
+use App\Http\Controllers\PresenceController;
 use App\Mail\ContactMessageReceived;
 use App\Models\Message;
 use App\Support\ClientIp;
@@ -49,6 +50,13 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/conversations/{conversation}/messages', 'send')->middleware('throttle:messages');
         Route::delete('/conversations/{conversation}/messages/{message}', 'deleteMessage')->scopeBindings();
         Route::post('/conversations/{conversation}/read', 'read');
+        Route::post('/conversations/{conversation}/typing', 'typing')->middleware('throttle:typing');
+    });
+
+    Route::controller(PresenceController::class)->group(function () {
+        Route::get('/presence', 'index');
+        Route::post('/presence/active', 'active')->middleware('throttle:presence');
+        Route::put('/presence/status', 'status')->middleware('throttle:presence');
     });
 
     Route::controller(GroupController::class)->group(function () {

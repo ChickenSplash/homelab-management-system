@@ -55,7 +55,9 @@ portfolio / glassbox ──/api/contact──► hms
 ## Data model
 
 - **users**: `id`, `public_id` (unique, 8 chars), `display_name`, `email` (nullable, unique),
-  `password` (nullable), `is_guest`, timestamps
+  `password` (nullable), `is_guest`, `status` (chosen: online / idle / dnd / invisible),
+  `presence` (what others last heard: online / idle / dnd / offline), `connected_at` (null while
+  no tab is connected), `active_at`, timestamps
 - **friendships**: `requester_id`, `addressee_id`, `accepted_at` (null while pending), one row per pair
 - **blocks**: `blocker_id`, `blocked_id`. Separate from friendships: blocks are one-way and two people can block each other
 - **conversations**: `type` (dm / group), `dm_key` (one DM per pair), `created_by`, `last_message_at`; groups add `name`, `description`, `visibility` (public / private), `invite_code`
@@ -166,8 +168,25 @@ and receives a live ping.
   bans, hand-over and blocked messages
 
 ### Phase 5 · Polish
-- Online presence, typing indicator, unread divider, mobile layout
-- Playwright e2e tests grow with each phase (headless)
+- [x] Online status, near instant: Reverb fires `ChannelCreated` / `ChannelRemoved` as a user's
+  first tab joins their private channel and their last one leaves. The listener (inside the
+  Reverb process) queues `SyncPresence`, which asks Reverb's HTTP API whether they're
+  connected, so going offline waits 5 s and a reload never flashes it
+- [x] Dead connections (laptop shut, Wi-Fi gone): Reverb pings quiet sockets after 20 s
+  (`REVERB_APP_PING_INTERVAL`) and HMS runs its prune and ping jobs every 10 s rather than
+  every 60 s. A frozen client showed offline after 29 s
+- [x] `presence:sync` every minute: fixes anyone Reverb and the database disagree about (a
+  Reverb restart sends no "left" events) and marks people idle after 10 quiet minutes
+- [x] Online, idle, do not disturb, invisible; seen by friends and anyone you share a DM or
+  group with, never by people blocked either way
+- [x] Typing indicator: sent at most every 3 s while typing, shown for 5 s or until the message
+  arrives; "Several people are typing…" from 4
+- [x] Unread divider: a red "New" line where you'd read up to when you opened the chat (or
+  switched tabs), a "N new messages · Jump · Mark as read" banner while it's off screen, Esc dismisses
+- [x] Phone layout (under 768 px): navigation or page, a menu button back, the member list
+  slides over the chat; installable (web app manifest, no service worker)
+- [x] Tests: presence, statuses, typing (HMS); Playwright for status changes, closing a tab,
+  reloads, typing, the divider and banner, and a WebKit run at iPhone size
 
 ### Phase 6 · Later
 - Edits, replies, reactions, attachments (maybe via copyparty), custom handles, voice
@@ -181,6 +200,10 @@ and receives a live ping.
   kicked, while this way they stop hearing the group at once.
 - Live events implement `ShouldBroadcastNow`: sent to Reverb during the request (~15 ms
   round trip). Queued broadcasts waited up to a second for the worker's next poll.
+- Presence comes from Reverb itself, not client heartbeats. Reverb can't broadcast to itself from
+  inside its own event loop, so the listener only queues a job; the worker does the rest.
+- Reverb sends an empty channel list as `[]`, which the Pusher SDK's `getChannels()` can't read,
+  so `App\Support\Presence` uses its raw `get()`.
 - SQLite transactions are `IMMEDIATE`: deferred ones failed with "database is locked" under
   concurrent writes instead of waiting out `busy_timeout`.
 - No PHP on the PC: run composer and tests in a `composer:2` container (Docker Desktop locally).
