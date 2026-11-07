@@ -74,6 +74,7 @@ Sign-in flow: `GET /sanctum/csrf-cookie`, then send the `XSRF-TOKEN` cookie back
 | `POST` | `/api/auth/guest` | `display_name`. A guest lasts until logout or session expiry |
 | `POST` | `/api/auth/logout` | Deletes the account if it is a guest |
 | `GET` / `PATCH` | `/api/auth/me` | Current user; change `display_name` |
+| `PUT` | `/api/auth/password` | `current_password`, `password`, `password_confirmation` (not for guests) |
 | `GET` | `/api/realtime` | Reverb app key for the WebSocket client |
 | `POST` | `/api/broadcasting/auth` | Private channel auth (`private-user.{id}`) |
 | `POST` | `/api/ping` | Broadcasts a `ping` to your own channel |

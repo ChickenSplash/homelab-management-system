@@ -105,6 +105,20 @@ class AuthController
         return new UserResource($request->user());
     }
 
+    public function updatePassword(Request $request): Response
+    {
+        abort_if($request->user()->is_guest, 403, 'Guests have no password.');
+
+        $validated = $request->validate([
+            'current_password' => ['required', 'string', 'current_password:web'],
+            'password' => ['required', 'confirmed', Password::defaults()],
+        ]);
+
+        $request->user()->update(['password' => $validated['password']]);
+
+        return response()->noContent();
+    }
+
     private function signIn(Request $request, User $user, bool $remember): JsonResponse
     {
         Auth::guard('web')->login($user, $remember);

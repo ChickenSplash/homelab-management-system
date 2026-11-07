@@ -45,7 +45,7 @@ portfolio / glassbox ──/api/contact──► hms
 - **hms**: the Laravel API. One image, four containers started with different commands:
   - `hms`: HTTP API (Octane + FrankenPHP)
   - `hms-reverb`: WebSocket server (Laravel Reverb), pushes live events to browsers
-  - `hms-queue`: background job worker (broadcasts, mail)
+  - `hms-queue`: background job worker (mail and other slow jobs)
   - `hms-scheduler`: timed jobs (guest cleanup)
 - **chat-ui**: separate repo, nginx serving the built React app and proxying `/api`,
   `/sanctum` and `/app` (Reverb WebSocket) so everything is same-origin.
@@ -112,16 +112,18 @@ Enforced with Laravel Policies, with a test per rule.
 - [x] Update the homelab skill file
 
 **10 to 13. Chat front end**
-- [ ] New repo `~/Projects/Apps/chat-ui`: Vite + React + TS + Tailwind 4, dev proxy to a local HMS
-- [ ] nginx container on `edge` proxying to `hms` and `hms-reverb`
-- [ ] Placeholder page: log in / register / join as guest, shows "connected as <name> (#public_id)", live ping round trip
+- [x] New repo `~/Projects/Apps/chat-ui`: Vite + React + TS + Tailwind 4, dev proxy to a local HMS
+- [x] nginx container on `edge` proxying to `hms` and `hms-reverb`
+- [x] Placeholder page: log in / register / join as guest, shows "connected as <name> (#public_id)", live ping round trip
 - [ ] Tunnel hostname `chat.chickensplash.dpdns.org` → `http://chat-ui:80` (Cloudflare dashboard, by hand)
 
 **Done when**: the contact form still delivers, and the chat placeholder logs in (user or guest)
 and receives a live ping.
 
 ### Phase 1 · Auth UI
-- Proper login, register, guest join and logout screens; profile (display name, password)
+- [x] Login, register, guest join and logout screens (guests confirm before logout deletes them)
+- [x] Profile: change display name; change password (`PUT /api/auth/password`, not for guests)
+- [x] Playwright e2e tests (Chromium + Firefox) in chat-ui, run against a local Docker copy of the stack
 
 ### Phase 2 · Friends
 - Find users by `public_id`, request, accept, decline, remove, block
@@ -140,6 +142,14 @@ and receives a live ping.
 - Edits, replies, reactions, attachments (maybe via copyparty), custom handles, voice
 
 ## Notes
+
+- Live events implement `ShouldBroadcastNow`: sent to Reverb during the request (~15 ms
+  round trip). Queued broadcasts waited up to a second for the worker's next poll.
+- SQLite transactions are `IMMEDIATE`: deferred ones failed with "database is locked" under
+  concurrent writes instead of waiting out `busy_timeout`.
+- No PHP on the PC: run composer and tests in a `composer:2` container (Docker Desktop locally).
+- To test the whole stack locally, run HMS, Reverb, the queue and chat-ui with Docker Compose,
+  with `SANCTUM_STATEFUL_DOMAINS=localhost:8090`, then `BASE_URL=http://localhost:8090 npx playwright test`.
 
 - Messages are stored readable on the server; this is not end-to-end encrypted.
 - Guests that close the tab without logging out are removed once their session expires.

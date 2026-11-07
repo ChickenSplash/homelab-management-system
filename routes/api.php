@@ -22,6 +22,7 @@ Route::prefix('auth')->controller(AuthController::class)->group(function () {
         Route::post('/logout', 'logout');
         Route::get('/me', 'me');
         Route::patch('/me', 'update');
+        Route::put('/password', 'updatePassword')->middleware('throttle:auth');
     });
 });
 

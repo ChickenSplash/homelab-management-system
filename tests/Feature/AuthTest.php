@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
 class AuthTest extends TestCase
@@ -168,6 +169,33 @@ class AuthTest extends TestCase
             ->assertJson(['display_name' => 'Night Owl']);
 
         $this->assertSame('Night Owl', $user->fresh()->display_name);
+    }
+
+    public function test_a_user_can_change_their_password_with_the_current_one(): void
+    {
+        $user = User::factory()->create();
+        $change = fn (string $current) => $this->actingAs($user)->putJson('/api/auth/password', [
+            'current_password' => $current,
+            'password' => 'a-brand-new-password',
+            'password_confirmation' => 'a-brand-new-password',
+        ]);
+
+        $change('not-the-password')->assertStatus(422)->assertJsonValidationErrors('current_password');
+        $this->assertTrue(Hash::check('password', $user->fresh()->password));
+
+        $change('password')->assertNoContent();
+        $this->assertTrue(Hash::check('a-brand-new-password', $user->fresh()->password));
+    }
+
+    public function test_guests_have_no_password_to_change(): void
+    {
+        $this->actingAs(User::factory()->guest()->create())
+            ->putJson('/api/auth/password', [
+                'current_password' => '',
+                'password' => 'a-brand-new-password',
+                'password_confirmation' => 'a-brand-new-password',
+            ])
+            ->assertForbidden();
     }
 
     public function test_deleting_a_user_takes_their_tokens_with_them(): void

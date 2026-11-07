@@ -4,11 +4,12 @@ namespace App\Events;
 
 use App\Models\User;
 use Illuminate\Broadcasting\PrivateChannel;
-use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
+use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
 
-// A round trip through the queue and Reverb back to the sender, to prove live updates work.
-class Ping implements ShouldBroadcast
+// A round trip through Reverb back to the sender, to prove live updates work. Sent during the
+// request rather than queued: the queue worker polls once a second, too slow for chat.
+class Ping implements ShouldBroadcastNow
 {
     use Dispatchable;
 
