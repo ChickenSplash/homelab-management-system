@@ -42,8 +42,8 @@ Everything per user cascades when the user goes. Cover files live in `MUSIC_COVE
 - [x] Studio API: list, edit, bulk edit, covers, albums, Scan now (only reports your own folder)
 - [x] music-ui: Spotify-style layout (top bar with search, library sidebar, page, now playing
       and lyrics or queue panel, player bar), phone layout (tabs, mini and full-screen player),
-      Media Session controls, studio pages
-- [x] Tests: 147 backend; Playwright on Chromium and Firefox (4 tests) and WebKit phone (1),
+      Media Session controls, studio pages, resizable and collapsible animated sidebars
+- [x] Tests: 147 backend; Playwright on Chromium and Firefox (7 tests) and WebKit phone (1),
       against the local stack in music-ui's `dev/docker-compose.yml`
 - [ ] Deploy (below)
 
