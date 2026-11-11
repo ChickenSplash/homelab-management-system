@@ -18,6 +18,9 @@
         <env name="APP_ENV" value="testing"/>
         <env name="APP_KEY" value="base64:jcJY5IJRNXMSuaJIt21pNASR8sgIyyz1+zQ4iUmBJsI="/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
+        <env name="ACCOUNTS_URL" value="https://accounts.test"/>
+        <env name="CHAT_URL" value="https://chat.test"/>
+        <env name="MUSIC_URL" value="https://music.test"/>
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="CACHE_STORE" value="array"/>
         <env name="DB_CONNECTION" value="sqlite"/>

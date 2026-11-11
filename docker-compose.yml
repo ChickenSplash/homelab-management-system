@@ -17,6 +17,14 @@ x-app: &app
         SESSION_DRIVER: database
         SESSION_LIFETIME: 43200
         SESSION_SECURE_COOKIE: 'true'
+        # One session for every app: the cookie goes to the parent domain and all its subdomains,
+        # under a new name so the old per-app cookies are just ignored.
+        SESSION_DOMAIN: '${SESSION_DOMAIN:-chickensplash.dpdns.org}'
+        SESSION_COOKIE: hms_sso
+        # The sign-in site (HMS itself, through the tunnel), and the apps it sends people back to.
+        ACCOUNTS_URL: '${ACCOUNTS_URL:-https://chickensplash.dpdns.org}'
+        CHAT_URL: '${CHAT_URL:-https://chat.chickensplash.dpdns.org}'
+        MUSIC_URL: '${MUSIC_URL:-https://music.chickensplash.dpdns.org}'
         CACHE_STORE: database
         QUEUE_CONNECTION: database
         # Browser apps that sign in with a session cookie (comma separated hosts).
@@ -60,8 +68,8 @@ x-app: &app
     restart: unless-stopped
 
 services:
-    # The API. No published port: only the tunnel and other edge containers reach it,
-    # which is what makes CF-Connecting-IP trustworthy for rate limits.
+    # The API, and the sign-in site on ACCOUNTS_URL. No published port: only the tunnel and
+    # other edge containers reach it, which is what makes CF-Connecting-IP trustworthy for rate limits.
     hms:
         <<: *app
         build: .

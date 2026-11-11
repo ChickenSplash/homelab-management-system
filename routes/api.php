@@ -17,20 +17,12 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
 
-Route::prefix('auth')->controller(AuthController::class)->group(function () {
-    Route::middleware('throttle:auth')->group(function () {
-        Route::post('/register', 'register');
-        Route::post('/login', 'login');
-    });
-
-    Route::post('/guest', 'guest')->middleware('throttle:guest');
-
-    Route::middleware('auth:sanctum')->group(function () {
-        Route::post('/logout', 'logout');
-        Route::get('/me', 'me');
-        Route::patch('/me', 'update');
-        Route::put('/password', 'updatePassword')->middleware('throttle:auth');
-    });
+// Signing in happens on the sign-in site (routes/accounts.php), which shares its session with the apps.
+Route::prefix('auth')->controller(AuthController::class)->middleware('auth:sanctum')->group(function () {
+    Route::post('/logout', 'logout');
+    Route::get('/me', 'me');
+    Route::patch('/me', 'update');
+    Route::put('/password', 'updatePassword')->middleware('throttle:auth');
 });
 
 Route::middleware('auth:sanctum')->group(function () {

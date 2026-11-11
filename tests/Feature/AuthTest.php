@@ -11,126 +11,16 @@ class AuthTest extends TestCase
 {
     use RefreshDatabase;
 
-    /** @return array<string, string> */
-    private function registration(array $overrides = []): array
-    {
-        return [
-            'display_name' => 'Taylor',
-            'email' => 'taylor@example.com',
-            'password' => 'a-long-password',
-            'password_confirmation' => 'a-long-password',
-            ...$overrides,
-        ];
-    }
-
-    public function test_a_user_can_register_and_is_signed_in(): void
-    {
-        $this->fromSpa()->postJson('/api/auth/register', $this->registration())
-            ->assertCreated()
-            ->assertJson(['display_name' => 'Taylor', 'is_guest' => false, 'email' => 'taylor@example.com'])
-            ->assertJsonMissingPath('password');
-
-        $user = User::sole();
-        $this->assertAuthenticatedAs($user);
-        $this->assertMatchesRegularExpression('/^[a-z2-9]{8}$/', $user->public_id);
-        $this->assertSame($user->public_id, $this->getJson('/api/auth/me')->json('id'));
-    }
-
-    public function test_display_names_do_not_have_to_be_unique(): void
-    {
-        User::factory()->create(['display_name' => 'Taylor']);
-
-        $this->fromSpa()->postJson('/api/auth/register', $this->registration())->assertCreated();
-
-        $this->assertSame(2, User::where('display_name', 'Taylor')->count());
-        $this->assertSame(2, User::distinct()->count('public_id'));
-    }
-
-    public function test_an_email_can_only_register_once(): void
-    {
-        User::factory()->create(['email' => 'taylor@example.com']);
-
-        $this->fromSpa()->postJson('/api/auth/register', $this->registration())
-            ->assertStatus(422)
-            ->assertJsonValidationErrors('email');
-    }
-
-    public function test_a_display_name_needs_something_visible_and_no_control_characters(): void
-    {
-        foreach (['', '   ', "evil\u{202E}name", str_repeat('a', 33)] as $name) {
-            $this->fromSpa()->postJson('/api/auth/register', $this->registration(['display_name' => $name]))
-                ->assertStatus(422)
-                ->assertJsonValidationErrors('display_name');
-        }
-
-        $this->assertDatabaseCount('users', 0);
-    }
-
-    public function test_a_user_can_log_in_with_their_email_and_password(): void
-    {
-        $user = User::factory()->create(['email' => 'test@example.com']);
-
-        $this->fromSpa()->postJson('/api/auth/login', ['email' => 'test@example.com', 'password' => 'password'])
-            ->assertOk()
-            ->assertJson(['id' => $user->public_id]);
-
-        $this->assertAuthenticatedAs($user);
-    }
-
-    public function test_logging_in_fails_with_the_wrong_password(): void
+    public function test_signing_in_is_not_part_of_the_api(): void
     {
         User::factory()->create(['email' => 'test@example.com']);
 
-        $this->fromSpa()->postJson('/api/auth/login', ['email' => 'test@example.com', 'password' => 'wrong'])
-            ->assertStatus(422)
-            ->assertJsonValidationErrors('email');
+        foreach (['/api/auth/login', '/api/auth/register', '/api/auth/guest'] as $path) {
+            $this->fromSpa()->postJson($path, ['email' => 'test@example.com', 'password' => 'password', 'display_name' => 'Taylor'])
+                ->assertNotFound();
+        }
 
         $this->assertGuest();
-    }
-
-    public function test_signing_in_needs_a_stateful_browser_app(): void
-    {
-        User::factory()->create(['email' => 'test@example.com']);
-
-        $this->postJson('/api/auth/login', ['email' => 'test@example.com', 'password' => 'password'])
-            ->assertStatus(400);
-
-        $this->withHeader('Origin', 'https://evil.example')
-            ->postJson('/api/auth/guest', ['display_name' => 'Sneaky'])
-            ->assertStatus(400);
-
-        $this->assertDatabaseCount('users', 1);
-    }
-
-    public function test_anyone_can_join_as_a_guest_with_just_a_name(): void
-    {
-        $this->fromSpa()->postJson('/api/auth/guest', ['display_name' => 'Taylor'])
-            ->assertCreated()
-            ->assertJson(['display_name' => 'Taylor', 'is_guest' => true, 'email' => null]);
-
-        $guest = User::sole();
-        $this->assertTrue($guest->is_guest);
-        $this->assertNull($guest->password);
-        $this->assertAuthenticatedAs($guest);
-    }
-
-    public function test_you_cannot_sign_in_again_while_signed_in(): void
-    {
-        $this->fromSpa()->postJson('/api/auth/guest', ['display_name' => 'First'])->assertCreated();
-
-        $this->postJson('/api/auth/guest', ['display_name' => 'Second'])->assertStatus(409);
-
-        $this->assertDatabaseCount('users', 1);
-    }
-
-    public function test_guest_creation_is_rate_limited(): void
-    {
-        for ($i = 0; $i < 3; $i++) {
-            $this->fromSpa()->postJson('/api/auth/guest', ['display_name' => "Guest {$i}"])->assertCreated();
-            $this->postJson('/api/auth/logout')->assertNoContent();
-        }
-
-        $this->postJson('/api/auth/guest', ['display_name' => 'One too many'])->assertTooManyRequests();
     }
 
     public function test_logging_out_keeps_a_user_but_deletes_a_guest(): void

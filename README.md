@@ -1,8 +1,9 @@
 # Homelab Management System (HMS)
 
 The API behind the homelab's apps: accounts (including guests), real-time events, the music
-service and the portfolio's contact form. No front end of its own; each app brings its own and
-talks to this ([chat-ui](https://github.com/ChickenSplash/chat-ui), music-ui).
+service and the portfolio's contact form. Each app brings its own front end and talks to this
+([chat-ui](https://github.com/ChickenSplash/chat-ui), music-ui). The only pages HMS serves itself
+are the shared sign-in site (see [Sign-in site](#sign-in-site)).
 
 Plans: [messaging](docs/plans/messaging-service.md) (closed), [music](docs/plans/music-service.md).
 
@@ -19,7 +20,7 @@ One image, four services on the external `edge` network:
 
 | Service | Does |
 |---|---|
-| `hms` | The HTTP API on port 3000. Runs migrations on start |
+| `hms` | The HTTP API and the sign-in site on port 3000. Runs migrations on start |
 | `hms-reverb` | WebSocket server on port 8080 |
 | `hms-queue` | Background jobs (broadcasts) |
 | `hms-scheduler` | Timed jobs (`guests:prune` hourly, `presence:sync` every minute, `music:scan` every five minutes) |
@@ -42,9 +43,16 @@ APP_KEY=base64:...                 # docker compose run --rm --no-deps hms php a
 REVERB_APP_KEY=...                 # openssl rand -hex 16
 REVERB_APP_SECRET=...              # openssl rand -hex 16
 
-# Browser apps allowed to sign in, and to open WebSockets (comma separated hosts)
+# Browser apps allowed to use the session, and to open WebSockets (comma separated hosts)
 SANCTUM_STATEFUL_DOMAINS=chat.chickensplash.dpdns.org,music.chickensplash.dpdns.org
 REVERB_ALLOWED_ORIGINS=chat.chickensplash.dpdns.org
+
+# The sign-in site, the apps it sends people back to, and the parent domain the session cookie
+# (hms_sso) is shared on. These are the compose defaults.
+ACCOUNTS_URL=https://chickensplash.dpdns.org
+CHAT_URL=https://chat.chickensplash.dpdns.org
+MUSIC_URL=https://music.chickensplash.dpdns.org
+SESSION_DOMAIN=chickensplash.dpdns.org
 
 # The music folder on the host, mounted read-only at /music (default /srv/files/Music).
 # Create it as your user first, or Docker makes a root-owned one copyparty can't write to.
@@ -65,19 +73,50 @@ Serve the app from its own nginx and proxy these to HMS, so everything is same-o
 - `/app/` and `/apps/` (WebSocket upgrade) → `http://hms-reverb:8080`
 
 Set `X-Forwarded-For` to `$http_cf_connecting_ip` and keep the `Host` header. Then add the
-app's host to `SANCTUM_STATEFUL_DOMAINS` and `REVERB_ALLOWED_ORIGINS`.
+app's host to `SANCTUM_STATEFUL_DOMAINS` and `REVERB_ALLOWED_ORIGINS`, and its URL to
+`config/accounts.php` (with an env var like `CHAT_URL`), which lists it on the launcher and
+lets the sign-in site send people back to it.
 
-Sign-in flow: `GET /sanctum/csrf-cookie`, then send the `XSRF-TOKEN` cookie back as the
-`X-XSRF-TOKEN` header on every write.
+The app has no sign-in screen of its own. When `GET /api/auth/me` answers 401, it sends the
+browser to `ACCOUNTS_URL/login?return=<the current URL>`. Writes send the `XSRF-TOKEN` cookie
+back as the `X-XSRF-TOKEN` header (`GET /sanctum/csrf-cookie` first if there isn't one).
+
+## Sign-in site
+
+HMS serves a small server-rendered site (Blade, one stylesheet, no JavaScript) on
+`ACCOUNTS_URL`'s host, `chickensplash.dpdns.org`. The tunnel sends that hostname straight to
+`http://hms:3000`.
+
+| Path | |
+|---|---|
+| `/` | The launcher (your apps, log out) once signed in, otherwise a redirect to `/login` |
+| `/login`, `/register`, `/guest` | One tab each. `POST` signs in, then redirects to `return` or `/` |
+| `/logout` | `POST`. Ends the session for every app; a guest account is deleted |
+| `/terms` | The terms and privacy policy for every app |
+
+- **One session for every app:** the session cookie `hms_sso` (and `XSRF-TOKEN`, and the
+  remember-me cookie) are set on `SESSION_DOMAIN`, the parent domain, so every subdomain sends
+  them. `dpdns.org` is on the Public Suffix List, so no one else's subdomain can read or set them.
+- **Where it sends you back to:** `return` must be an absolute URL starting with one of the
+  apps' exact origins (`https`, host and port) followed by `/`, or nothing. Anything else goes to
+  the launcher, so the site can't be used as an open redirect (`app/Support/Accounts.php`).
+- **Only these pages on that host:** `KeepAccountsHostToItsPages` answers 404 there for
+  everything else (`/api`, `/sanctum`, broadcasting, media). The API stays behind the apps' proxies.
+- **Headers:** a CSP with no script at all, `frame-ancestors 'none'` and `form-action` limited to
+  the site and the apps, plus HSTS, `nosniff` and `no-store`.
+- **Rate limits:** the same `auth` (10 a minute) and `guest` (3 a minute, 30 a day) limits per
+  `CF-Connecting-IP`. An expired form or too many attempts goes back to the form with a note.
+- **Locally:** cookies ignore the port, so an app on `localhost:8090` and the site on
+  `localhost:8091` share the session without `SESSION_DOMAIN` (the apps' `dev/docker-compose.yml`).
+- **Other subdomains** (files, portfolio, the glass box) receive the cookies too. Their proxies
+  don't pass them on: files-ui strips them before copyparty, the portfolio's contact proxy drops
+  all cookies, and the glass box builds its own headers for HMS.
 
 ## API
 
 | Method | Path | |
 |---|---|---|
-| `POST` | `/api/auth/register` | `display_name`, `email`, `password`, `password_confirmation` |
-| `POST` | `/api/auth/login` | `email`, `password`, `remember` |
-| `POST` | `/api/auth/guest` | `display_name`. A guest lasts until logout or session expiry |
-| `POST` | `/api/auth/logout` | Deletes the account if it is a guest |
+| `POST` | `/api/auth/logout` | Ends the shared session (every app). Deletes the account if it is a guest. Signing in is on the [sign-in site](#sign-in-site) |
 | `GET` / `PATCH` | `/api/auth/me` | Current user; change `display_name` |
 | `PUT` | `/api/auth/password` | `current_password`, `password`, `password_confirmation` (not for guests) |
 | `GET` | `/api/realtime` | Reverb app key for the WebSocket client |
