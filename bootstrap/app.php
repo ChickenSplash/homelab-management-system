@@ -14,6 +14,8 @@ return Application::configure(basePath: dirname(__DIR__))
         // Outside any middleware group, so a bot hitting the root never opens a session.
         then: function () {
             Route::get('/', fn () => ['name' => config('app.name'), 'ok' => true]);
+
+            Route::middleware(['web', 'auth:web'])->group(base_path('routes/media.php'));
         },
     )
     // Under /api so the front ends only have to proxy /api, /sanctum and the WebSocket.

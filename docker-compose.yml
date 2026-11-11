@@ -20,7 +20,7 @@ x-app: &app
         CACHE_STORE: database
         QUEUE_CONNECTION: database
         # Browser apps that sign in with a session cookie (comma separated hosts).
-        SANCTUM_STATEFUL_DOMAINS: '${SANCTUM_STATEFUL_DOMAINS:-chat.chickensplash.dpdns.org}'
+        SANCTUM_STATEFUL_DOMAINS: '${SANCTUM_STATEFUL_DOMAINS:-chat.chickensplash.dpdns.org,music.chickensplash.dpdns.org}'
         # Reverb: the API and the queue publish to hms-reverb over the edge network;
         # browsers reach it through their app's own nginx at /app.
         BROADCAST_CONNECTION: reverb
@@ -45,9 +45,16 @@ x-app: &app
         MAIL_FROM_ADDRESS: '${MAIL_USERNAME:-hello@example.com}'
         MAIL_FROM_NAME: 'Portfolio'
         LOG_CHANNEL: stderr
+        # Music: each creator's MP3s sit under /music/<public_id>/. Cover art lives on the
+        # database volume, and music-ui's nginx serves the streams (X-Accel-Redirect).
+        MUSIC_ROOT: /music
+        MUSIC_COVERS: /app/data/music-covers
+        MUSIC_ACCEL_PREFIX: /_music/
     volumes:
         # Not /app/database: a volume there hides any migration added after it was created.
         - database:/app/data
+        # Create the folder first (as your user), or Docker makes a root-owned one copyparty can't write to.
+        - '${MUSIC_PATH:-/srv/files/Music}:/music:ro'
     networks:
         - edge
     restart: unless-stopped
