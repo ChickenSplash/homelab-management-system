@@ -50,6 +50,18 @@ class AppServiceProvider extends ServiceProvider
 
         RateLimiter::for('presence', fn (Request $request) => Limit::perMinute(20)->by($request->user()?->id ?: ClientIp::of($request)));
 
+        // Per address, so one visitor making guest after guest can't pull the library through the tunnel.
+        // Playback is a handful of range requests per track, plus one per seek.
+        RateLimiter::for('music-stream', fn (Request $request) => [
+            Limit::perMinute(120)->by(ClientIp::of($request)),
+            Limit::perDay(5000)->by(ClientIp::of($request)),
+        ]);
+
+        // Likes, plays, playlist and studio edits.
+        RateLimiter::for('music-writes', fn (Request $request) => Limit::perMinute(120)->by($request->user()?->id ?: ClientIp::of($request)));
+
+        RateLimiter::for('music-scan', fn (Request $request) => Limit::perMinute(3)->by($request->user()?->id ?: ClientIp::of($request)));
+
         $this->trackConnections();
     }
 
