@@ -1,6 +1,6 @@
 # Daily service
 
-Status: implemented locally, not deployed. Frontend: `ChickenSplash/daily-ui`.
+Status: implemented and verified, prepared for production deployment. Frontend: `ChickenSplash/daily-ui`. Production origin: `https://daily.chickensplash.dpdns.org`.
 
 ## Ownership and storage
 
@@ -59,4 +59,4 @@ Backend feature tests cover owner isolation, guest cascades, revisions, exact Ma
 - `DAILY_URL` defaults empty, so the launcher does not advertise an undeployed app.
 - Verify the shared terms reflect journal data, temporary guest data, browser recovery drafts and absence of end-to-end encryption.
 - Check `hms-scheduler` is running and `daily:sync` succeeds.
-- Production remains untouched until a separate deployment step.
+- Deploy through HMS `main` after a consistent SQLite snapshot and an off-host integrity/restore check. Set `DAILY_URL=https://daily.chickensplash.dpdns.org`, retain existing Sanctum hosts and add `daily.chickensplash.dpdns.org`. The frontend container is `daily-ui` on the existing `edge` network; its tunnel target is `http://daily-ui:80`.
