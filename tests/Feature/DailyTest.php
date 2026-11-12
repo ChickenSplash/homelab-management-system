@@ -42,6 +42,34 @@ class DailyTest extends TestCase
         $this->getJson('/api/daily/bootstrap')->assertUnauthorized();
         $this->getJson('/api/daily/export')->assertUnauthorized();
         $this->postJson('/api/daily/activities', [])->assertUnauthorized();
+        $this->deleteJson('/api/daily/activities/1')->assertUnauthorized();
+    }
+
+    public function test_only_archived_activities_can_be_deleted_and_their_history_cascades(): void
+    {
+        $this->signIn(true);
+        $id = $this->exercise();
+        $this->routine($id);
+        $this->getJson('/api/daily/days/2026-11-10')->assertJsonCount(1, 'activities');
+        $this->deleteJson("/api/daily/activities/{$id}")->assertUnprocessable();
+        $this->patchJson("/api/daily/activities/{$id}", ['archived' => true])->assertOk();
+        $this->deleteJson("/api/daily/activities/{$id}")->assertNoContent();
+        foreach (['activities', 'schedule_rules', 'activity_days'] as $table) {
+            $this->assertDatabaseCount('daily_'.$table, 0);
+        }
+        $this->getJson('/api/daily/bootstrap')->assertJsonCount(0, 'activities');
+        $this->getJson('/api/daily/days/2026-11-10')->assertJsonCount(0, 'activities');
+        $this->assertDatabaseCount('daily_journals', 2);
+    }
+
+    public function test_another_users_archived_activity_cannot_be_deleted(): void
+    {
+        $this->signIn();
+        $id = $this->exercise();
+        $this->patchJson("/api/daily/activities/{$id}", ['archived' => true])->assertOk();
+        $this->signIn(true);
+        $this->deleteJson("/api/daily/activities/{$id}")->assertNotFound();
+        $this->assertDatabaseHas('daily_activities', ['id' => $id]);
     }
 
     public function test_guests_get_private_default_journals_only_once(): void

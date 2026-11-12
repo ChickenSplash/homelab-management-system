@@ -15,6 +15,7 @@ Route::controller(DailyController::class)->group(function () {
     Route::put('/journals/{id}/entries/{date}', 'saveEntry');
     Route::post('/activities', 'createActivity');
     Route::patch('/activities/{id}', 'updateActivity');
+    Route::delete('/activities/{id}', 'deleteActivity');
     Route::put('/activities/{id}/schedule', 'schedule');
     Route::put('/days/{date}/activities/{id}', 'saveActivityDay');
 });

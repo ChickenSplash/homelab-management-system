@@ -141,6 +141,17 @@ class DailyController
         });
     }
 
+    public function deleteActivity(Request $request, int $id)
+    {
+        return DB::transaction(function () use ($request, $id) {
+            $activity = $this->activity($request, $id);
+            abort_unless($activity->archived_on, 422, 'Archive this activity before deleting it.');
+            $activity->delete();
+
+            return response()->noContent();
+        });
+    }
+
     public function schedule(Request $request, int $id)
     {
         $activity = $this->activity($request, $id);

@@ -41,6 +41,7 @@ All under `/api/daily`, authenticated, rate-limited and private/no-store.
 | PUT | `/journals/{id}/entries/{date}` | `body`, `revision` (0 for new) |
 | POST | `/activities` | `name`, `unit` |
 | PATCH | `/activities/{id}` | `name`, `archived`; unit cannot change |
+| DELETE | `/activities/{id}` | Permanently delete an archived activity, cascading to its routines and all daily results; active activities must be archived first |
 | PUT | `/activities/{id}/schedule` | `starts_on`, `weekdays`, `target` (null for checkbox) |
 | PUT | `/days/{date}/activities/{id}` | `target`, `actual`, `status`, `revision` (0 for new) |
 | GET | `/export` | Versioned JSON including Markdown entries, routines and results |
