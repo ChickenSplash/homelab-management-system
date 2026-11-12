@@ -156,15 +156,40 @@ class DailyTest extends TestCase
         $this->patchJson("/api/daily/activities/{$id}", ['unit' => 'seconds'])->assertUnprocessable();
     }
 
-    public function test_future_completion_and_invalid_dates_and_ranges_are_rejected(): void
+    public function test_invalid_dates_and_ranges_are_rejected(): void
     {
         $this->signIn();
-        $id = $this->exercise();
-        $this->putJson("/api/daily/days/2026-11-11/activities/{$id}", ['target' => 20, 'actual' => 20, 'status' => 'completed', 'revision' => 0])->assertUnprocessable();
         $this->getJson('/api/daily/days/2026-02-30')->assertUnprocessable();
         $this->getJson('/api/daily/calendar?from=2026-01-01&to=2026-12-31')->assertUnprocessable();
         $this->getJson('/api/daily/calendar?from=2026-11-11&to=2026-11-10')->assertUnprocessable();
         $this->patchJson('/api/daily/settings', ['timezone' => 'Made/Up'])->assertUnprocessable();
+    }
+
+    public function test_past_and_future_activity_totals_can_be_edited_completed_undone_and_skipped(): void
+    {
+        $this->signIn();
+        $id = $this->exercise();
+        $this->routine($id);
+        foreach (['2026-11-09', '2026-11-11'] as $date) {
+            // Tomorrow's recurring item begins as a preview, yesterday is a one-off.
+            $this->getJson("/api/daily/days/{$date}")->assertOk();
+            $url = "/api/daily/days/{$date}/activities/{$id}";
+            $this->putJson($url, ['target' => 20, 'actual' => 7, 'status' => 'pending', 'revision' => 0])->assertOk()->assertJsonPath('actual', 7);
+            $this->putJson($url, ['target' => 20, 'actual' => 25, 'status' => 'pending', 'revision' => 1])->assertOk()->assertJsonPath('status', 'completed');
+            $this->putJson($url, ['target' => 20, 'actual' => 0, 'status' => 'pending', 'revision' => 2])->assertOk()->assertJsonPath('completed_at', null);
+            $this->putJson($url, ['target' => 20, 'actual' => 0, 'status' => 'skipped', 'revision' => 3])->assertOk()->assertJsonPath('status', 'skipped');
+            $this->getJson("/api/daily/days/{$date}")->assertJsonPath('activities.0.status', 'skipped')->assertJsonPath('activities.0.preview', false);
+        }
+    }
+
+    public function test_checkbox_activities_can_be_completed_in_the_past_and_future(): void
+    {
+        $this->signIn(true);
+        $id = $this->postJson('/api/daily/activities', ['name' => 'Read', 'unit' => 'checkbox'])->assertCreated()->json('id');
+        foreach (['2026-11-09', '2026-11-11'] as $date) {
+            $this->putJson("/api/daily/days/{$date}/activities/{$id}", ['target' => null, 'actual' => 0, 'status' => 'completed', 'revision' => 0])->assertOk()->assertJsonPath('status', 'completed');
+            $this->getJson("/api/daily/days/{$date}")->assertJsonPath('activities.0.status', 'completed');
+        }
     }
 
     public function test_archiving_keeps_history_and_restoring_works(): void

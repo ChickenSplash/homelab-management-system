@@ -190,8 +190,6 @@ class DailyController
             'actual' => ['required', 'numeric', 'min:0', 'max:999999999', 'decimal:0,2'],
             'status' => ['required', Rule::in(['pending', 'completed', 'skipped'])],
         ]);
-        $future = $date > $this->diary->today($request->user());
-        abort_if($future && ($data['actual'] > 0 || $data['status'] !== 'pending'), 422, 'Future activities cannot be completed or skipped yet.');
 
         return DB::transaction(function () use ($activity, $date, $data) {
             $day = $activity->days()->where('activity_date', $date)->first();

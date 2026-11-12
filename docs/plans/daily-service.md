@@ -23,7 +23,7 @@ Elapsed scheduled dates are snapshotted idempotently when read. `daily:sync`, sc
 
 Before rename, archive or timezone change, history is materialised in bounded 90-day chunks so historical labels and targets stay stable. Archiving retains today's checklist, stops future rules and preserves results. Restoring an activity does not resume its ended routine: choose repeating days again. Existing one-off future records are explicit user data and are retained.
 
-Daily statuses: pending, completed, skipped. Numeric completion is derived from actual >= target, unless skipped. Checkbox completion is explicit. Future days can be planned but not completed or skipped. Partial totals, exceeding a target, undo and corrections to earlier dates are supported.
+Daily statuses: pending, completed, skipped. Numeric completion is derived from actual >= target, unless skipped. Checkbox completion is explicit. Activities on any valid date, past, present or future, can be completed, skipped, undone or have their totals edited. Editing a future preview stores that day's result without changing the recurring routine. Partial totals and exceeding a target are supported.
 
 ## API
 
