@@ -7,6 +7,8 @@ are the shared sign-in site (see [Sign-in site](#sign-in-site)).
 
 Plans: [messaging](docs/plans/messaging-service.md) (closed), [music](docs/plans/music-service.md).
 
+[Daily](docs/plans/daily-service.md) adds private journals and daily activity checklists, including guest accounts. Implemented locally, deployment pending; set `DAILY_URL` and its Sanctum host when enabling the frontend.
+
 ## Stack
 
 - Laravel 13 on Octane + FrankenPHP

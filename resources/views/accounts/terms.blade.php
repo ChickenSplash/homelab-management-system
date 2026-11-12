@@ -10,12 +10,12 @@
     <p><a href="/">← Back</a></p>
 
     <h1>Terms and privacy</h1>
-    <p class="muted small">Last updated 11 November 2026</p>
+    <p class="muted small">Last updated 12 November 2026</p>
 
     <section>
         <h2>About</h2>
         <p>
-            Chat and Music are small personal hobby projects hosted in the United Kingdom. They share one
+            Chat, Music and Daily are small personal hobby projects hosted in the United Kingdom. They share one
             account system, so these terms cover all of them. They're free and provided as is. By creating an
             account or joining as a guest, you agree to these terms.
         </p>
@@ -94,12 +94,20 @@
                 played"). Playlists are private to you.
             </li>
             <li>
+                <strong>Daily:</strong> your journals and Markdown entries, activity routines, daily targets,
+                completed totals and timezone. These are private to your account, but not end-to-end encrypted:
+                the server operator can access the stored data. You can export it in Daily's settings.
+            </li>
+            <li>
                 <strong>Where:</strong> a private server in the UK. Traffic passes through Cloudflare, which sees
                 your IP address.
             </li>
             <li>
                 <strong>Cookies:</strong> only the ones needed to keep you signed in across the apps, plus Music's
-                volume setting stored in your browser. No tracking or advertising.
+                volume setting and Daily's theme and collapsed-journal preferences stored in your browser.
+                Daily also keeps unsaved recovery drafts in plain text in your browser until successfully saved,
+                discarded or cleared on logout from Daily. Clear site data on a shared device to remove any
+                remaining drafts. No tracking or advertising.
             </li>
             <li>Your data is never sold or shared, except where the law requires it.</li>
         </ul>
@@ -111,9 +119,10 @@
             <li>A deleted message has its text erased. Only a "message deleted" placeholder is kept.</li>
             <li>
                 Guest accounts are deleted when you log out (from any app) or your session expires, with their
-                playlists and likes.
+                playlists, likes, journals, journal entries, routines and daily activity records.
             </li>
             <li>To delete a registered account, email us from the address you signed up with.</li>
+            <li>Deleting any account also deletes all its Daily data from the live database.</li>
             <li>
                 When an account is deleted, its profile goes. Messages in conversations other people are still in
                 stay, shown as from "Deleted user". Ask if you want those removed too.

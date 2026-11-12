@@ -1,10 +1,13 @@
 <?php
 
 use App\Models\User;
+use App\Support\Daily\Diary;
 use App\Support\Music\Scanner;
 use App\Support\Presence;
+use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schedule;
 
 Artisan::command('guests:prune', function () {
@@ -51,3 +54,13 @@ Artisan::command('music:scan', function (Scanner $scanner) {
 Schedule::command('guests:prune')->hourly();
 Schedule::command('music:scan')->everyFiveMinutes();
 Schedule::command('presence:sync')->everyMinute();
+
+Artisan::command('daily:sync', function (Diary $diary) {
+    User::whereIn('id', DB::table('daily_settings')->select('user_id'))->lazyById()->each(function (User $user) use ($diary) {
+        $today = $diary->today($user);
+        $diary->days($user, CarbonImmutable::parse($today)->subDay()->toDateString(), $today);
+    });
+    $this->info('Daily checklists synchronised.');
+})->purpose('Snapshot daily activity targets, including days nobody visits');
+
+Schedule::command('daily:sync')->hourly()->withoutOverlapping();

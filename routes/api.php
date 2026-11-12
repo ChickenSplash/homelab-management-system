@@ -2,6 +2,7 @@
 
 use App\Events\Ping;
 use App\Http\Controllers\AuthController;
+use App\Http\Middleware\DailyPrivate;
 use App\Mail\ContactMessageReceived;
 use App\Models\Message;
 use App\Support\ClientIp;
@@ -20,6 +21,7 @@ Route::prefix('auth')->controller(AuthController::class)->middleware('auth:sanct
 
 Route::middleware('auth:sanctum')->group(base_path('routes/chat.php'));
 Route::middleware('auth:sanctum')->prefix('music')->group(base_path('routes/music.php'));
+Route::middleware([DailyPrivate::class, 'auth:sanctum', 'throttle:120,1'])->prefix('daily')->group(base_path('routes/daily.php'));
 
 // What a browser needs to open the Reverb WebSocket. The key is public by design;
 // the secret never leaves the server.

@@ -40,6 +40,9 @@ return Application::configure(basePath: dirname(__DIR__))
         // Everything else (the contact form, scripts with bearer tokens) stays stateless.
         $middleware->statefulApi();
 
+        // Leading indentation and trailing spaces are meaningful in Markdown entries.
+        $middleware->trimStrings(except: [fn (Request $request) => $request->is('api/daily/journals/*/entries/*')]);
+
         // The apps send signed-out visitors to the sign-in site themselves; the API just answers 401.
         $middleware->redirectGuestsTo(fn () => null);
 

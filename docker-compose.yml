@@ -25,6 +25,8 @@ x-app: &app
         ACCOUNTS_URL: '${ACCOUNTS_URL:-https://chickensplash.dpdns.org}'
         CHAT_URL: '${CHAT_URL:-https://chat.chickensplash.dpdns.org}'
         MUSIC_URL: '${MUSIC_URL:-https://music.chickensplash.dpdns.org}'
+        # Enable once the Daily frontend and hostname are deployed.
+        DAILY_URL: '${DAILY_URL:-}'
         CACHE_STORE: database
         QUEUE_CONNECTION: database
         # Browser apps that sign in with a session cookie (comma separated hosts).

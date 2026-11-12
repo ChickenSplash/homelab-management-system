@@ -10,5 +10,6 @@ return [
     'apps' => array_values(array_filter([
         ['name' => 'Chat', 'description' => 'Friends, groups and direct messages.', 'url' => env('CHAT_URL', 'https://chat.chickensplash.dpdns.org')],
         ['name' => 'Music', 'description' => 'AI-made music, free to stream.', 'url' => env('MUSIC_URL', 'https://music.chickensplash.dpdns.org')],
+        ['name' => 'Daily', 'description' => 'Your journals, gratitude and daily activities.', 'url' => env('DAILY_URL', '')],
     ], fn (array $app) => filled($app['url']))),
 ];
