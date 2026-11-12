@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\ChatMessage;
-use App\Models\Conversation;
+use App\Models\Chat\ChatMessage;
+use App\Models\Chat\Conversation;
 use App\Models\User;
 use App\Support\Live;
 use Illuminate\Http\JsonResponse;

@@ -1,11 +1,14 @@
 <?php
 
-namespace App\Models;
+namespace App\Models\Chat;
 
+use App\Models\User;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\Table;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+#[Table('chat_conversation_members')]
 #[Fillable(['conversation_id', 'user_id', 'role', 'last_read_message_id'])]
 class ConversationMember extends Model
 {

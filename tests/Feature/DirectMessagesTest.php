@@ -3,7 +3,7 @@
 namespace Tests\Feature;
 
 use App\Events\LiveUpdate;
-use App\Models\ChatMessage;
+use App\Models\Chat\ChatMessage;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
@@ -245,7 +245,7 @@ class DirectMessagesTest extends TestCase
         $a->delete();
         $b->delete();
 
-        $this->assertDatabaseCount('conversations', 0);
+        $this->assertDatabaseCount('chat_conversations', 0);
         $this->assertDatabaseCount('chat_messages', 0);
     }
 

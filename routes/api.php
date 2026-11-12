@@ -2,13 +2,6 @@
 
 use App\Events\Ping;
 use App\Http\Controllers\AuthController;
-use App\Http\Controllers\ConversationController;
-use App\Http\Controllers\FriendController;
-use App\Http\Controllers\GroupController;
-use App\Http\Controllers\MusicController;
-use App\Http\Controllers\PlaylistController;
-use App\Http\Controllers\PresenceController;
-use App\Http\Controllers\StudioController;
 use App\Mail\ContactMessageReceived;
 use App\Models\Message;
 use App\Support\ClientIp;
@@ -25,95 +18,8 @@ Route::prefix('auth')->controller(AuthController::class)->middleware('auth:sanct
     Route::put('/password', 'updatePassword')->middleware('throttle:auth');
 });
 
-Route::middleware('auth:sanctum')->group(function () {
-    Route::controller(FriendController::class)->group(function () {
-        Route::get('/friends', 'index');
-        Route::post('/friends', 'store')->middleware('throttle:find-users');
-        Route::post('/friends/{publicId}/accept', 'accept');
-        Route::delete('/friends/{publicId}', 'destroy');
-
-        Route::get('/blocks', 'blocks');
-        Route::put('/blocks/{publicId}', 'block');
-        Route::delete('/blocks/{publicId}', 'unblock');
-    });
-
-    Route::controller(ConversationController::class)->group(function () {
-        Route::post('/dms', 'openDm')->middleware('throttle:find-users');
-        Route::get('/conversations', 'index');
-        Route::get('/conversations/{conversation}', 'show')->whereNumber('conversation');
-        Route::get('/conversations/{conversation}/messages', 'messages');
-        Route::post('/conversations/{conversation}/messages', 'send')->middleware('throttle:messages');
-        Route::delete('/conversations/{conversation}/messages/{message}', 'deleteMessage')->scopeBindings();
-        Route::patch('/conversations/{conversation}/messages/{message}', 'editMessage')->scopeBindings()->middleware('throttle:messages');
-        Route::post('/conversations/{conversation}/read', 'read');
-        Route::post('/conversations/{conversation}/typing', 'typing')->middleware('throttle:typing');
-    });
-
-    Route::controller(PresenceController::class)->group(function () {
-        Route::get('/presence', 'index');
-        Route::post('/presence/active', 'active')->middleware('throttle:presence');
-        Route::put('/presence/status', 'status')->middleware('throttle:presence');
-    });
-
-    Route::controller(GroupController::class)->group(function () {
-        Route::get('/groups', 'browse');
-        Route::post('/groups', 'store')->middleware('throttle:groups');
-        Route::patch('/groups/{conversation}', 'update');
-        Route::delete('/groups/{conversation}', 'destroy');
-        Route::post('/groups/{conversation}/join', 'join');
-        Route::post('/groups/{conversation}/leave', 'leave');
-        Route::post('/groups/{conversation}/invite', 'resetInvite');
-        Route::post('/groups/{conversation}/transfer', 'transfer');
-        Route::get('/groups/{conversation}/members', 'members');
-        Route::put('/groups/{conversation}/members/{publicId}', 'setRole');
-        Route::delete('/groups/{conversation}/members/{publicId}', 'kick');
-        Route::get('/groups/{conversation}/bans', 'bans');
-        Route::put('/groups/{conversation}/bans/{publicId}', 'ban');
-        Route::delete('/groups/{conversation}/bans/{publicId}', 'unban');
-
-        // Invite codes are short enough to guess at, so looking them up shares the find-users limit.
-        Route::get('/invites/{code}', 'invite')->middleware('throttle:find-users');
-        Route::post('/invites/{code}', 'acceptInvite')->middleware('throttle:find-users');
-    });
-
-    Route::prefix('music')->group(function () {
-        Route::controller(MusicController::class)->group(function () {
-            Route::get('/home', 'home');
-            Route::get('/search', 'search');
-            Route::get('/tracks/{track}', 'track');
-            Route::post('/tracks/{track}/play', 'play')->middleware('throttle:music-writes');
-            Route::get('/albums/{album}', 'album');
-            Route::get('/creators/{publicId}', 'creator');
-            Route::get('/likes', 'likes');
-            Route::put('/likes/{track}', 'like')->middleware('throttle:music-writes');
-            Route::delete('/likes/{track}', 'unlike')->middleware('throttle:music-writes');
-        });
-
-        Route::controller(PlaylistController::class)->middleware('throttle:music-writes')->group(function () {
-            Route::get('/playlists', 'index')->withoutMiddleware('throttle:music-writes');
-            Route::post('/playlists', 'store');
-            Route::get('/playlists/{playlist}', 'show')->withoutMiddleware('throttle:music-writes');
-            Route::patch('/playlists/{playlist}', 'update');
-            Route::delete('/playlists/{playlist}', 'destroy');
-            Route::post('/playlists/{playlist}/tracks', 'addTracks');
-            Route::put('/playlists/{playlist}/tracks/{entry}', 'moveEntry')->scopeBindings();
-            Route::delete('/playlists/{playlist}/tracks/{entry}', 'removeEntry')->scopeBindings();
-        });
-
-        Route::prefix('studio')->controller(StudioController::class)->middleware('throttle:music-writes')->group(function () {
-            Route::get('/', 'index')->withoutMiddleware('throttle:music-writes');
-            Route::patch('/tracks', 'updateTracks');
-            Route::patch('/tracks/{track}', 'updateTrack');
-            Route::post('/tracks/{track}/cover', 'trackCover');
-            Route::delete('/tracks/{track}/cover', 'removeTrackCover');
-            Route::post('/albums', 'storeAlbum');
-            Route::patch('/albums/{album}', 'updateAlbum');
-            Route::delete('/albums/{album}', 'destroyAlbum');
-            Route::post('/albums/{album}/cover', 'albumCover');
-            Route::post('/scan', 'scan')->middleware('throttle:music-scan');
-        });
-    });
-});
+Route::middleware('auth:sanctum')->group(base_path('routes/chat.php'));
+Route::middleware('auth:sanctum')->prefix('music')->group(base_path('routes/music.php'));
 
 // What a browser needs to open the Reverb WebSocket. The key is public by design;
 // the secret never leaves the server.

@@ -1,13 +1,16 @@
 <?php
 
-namespace App\Models;
+namespace App\Models\Chat;
 
+use App\Models\User;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\Table;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 // A message in a DM or group. Not to be confused with Message, the contact form inbox.
+#[Table('chat_messages')]
 #[Fillable(['conversation_id', 'user_id', 'body', 'nonce', 'type', 'meta', 'reply_to_message_id'])]
 class ChatMessage extends Model
 {

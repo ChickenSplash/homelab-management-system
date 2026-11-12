@@ -4,9 +4,9 @@ namespace Tests\Feature;
 
 use App\Events\LiveUpdate;
 use App\Jobs\SyncPresence;
-use App\Models\Block;
-use App\Models\Conversation;
-use App\Models\Friendship;
+use App\Models\Chat\Block;
+use App\Models\Chat\Conversation;
+use App\Models\Chat\Friendship;
 use App\Models\User;
 use App\Support\Presence;
 use Illuminate\Foundation\Testing\RefreshDatabase;

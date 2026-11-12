@@ -1,6 +1,6 @@
 <?php
 
-use App\Models\ChatMessage;
+use App\Models\Chat\ChatMessage;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
 

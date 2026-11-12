@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Conversation;
-use App\Models\ConversationBan;
-use App\Models\ConversationMember;
+use App\Models\Chat\Conversation;
+use App\Models\Chat\ConversationBan;
+use App\Models\Chat\ConversationMember;
 use App\Models\User;
 use App\Support\Live;
 use Illuminate\Http\JsonResponse;

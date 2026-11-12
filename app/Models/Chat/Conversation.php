@@ -1,9 +1,11 @@
 <?php
 
-namespace App\Models;
+namespace App\Models\Chat;
 
+use App\Models\User;
 use App\Support\Live;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
@@ -12,6 +14,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
+#[Table('chat_conversations')]
 #[Fillable(['type', 'dm_key', 'created_by', 'last_message_at', 'name', 'description', 'visibility', 'invite_code'])]
 class Conversation extends Model
 {
@@ -51,16 +54,16 @@ class Conversation extends Model
      */
     public function scopeForViewer(Builder $query, User $me): void
     {
-        $query->select('conversations.*')
+        $query->select('chat_conversations.*')
             ->withCount('members')
             ->with('members.user', 'lastMessage.user', 'lastMessage.replyTo.user')
             ->addSelect(['unread_count' => ChatMessage::selectRaw('count(*)')
-                ->whereColumn('chat_messages.conversation_id', 'conversations.id')
+                ->whereColumn('chat_messages.conversation_id', 'chat_conversations.id')
                 ->where('chat_messages.type', 'text')
                 ->where(fn ($q) => $q->whereNull('chat_messages.user_id')->orWhere('chat_messages.user_id', '!=', $me->id))
                 ->where('chat_messages.id', '>', ConversationMember::selectRaw('coalesce(max(last_read_message_id), 0)')
-                    ->whereColumn('conversation_members.conversation_id', 'conversations.id')
-                    ->where('conversation_members.user_id', $me->id)),
+                    ->whereColumn('chat_conversation_members.conversation_id', 'chat_conversations.id')
+                    ->where('chat_conversation_members.user_id', $me->id)),
             ]);
     }
 

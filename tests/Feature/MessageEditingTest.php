@@ -3,9 +3,9 @@
 namespace Tests\Feature;
 
 use App\Events\LiveUpdate;
-use App\Models\Block;
-use App\Models\ChatMessage;
-use App\Models\Conversation;
+use App\Models\Chat\Block;
+use App\Models\Chat\ChatMessage;
+use App\Models\Chat\Conversation;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;

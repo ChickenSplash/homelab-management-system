@@ -3,9 +3,9 @@
 namespace Tests\Feature;
 
 use App\Events\LiveUpdate;
-use App\Models\ChatMessage;
-use App\Models\Conversation;
-use App\Models\ConversationMember;
+use App\Models\Chat\ChatMessage;
+use App\Models\Chat\Conversation;
+use App\Models\Chat\ConversationMember;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
@@ -184,7 +184,7 @@ class GroupsTest extends TestCase
         $this->actingAs($admin)->deleteJson("/api/groups/{$group}")->assertForbidden();
         $this->actingAs($this->owner)->deleteJson("/api/groups/{$group}")->assertNoContent();
 
-        $this->assertDatabaseCount('conversations', 0);
+        $this->assertDatabaseCount('chat_conversations', 0);
         Event::assertDispatched(LiveUpdate::class, fn (LiveUpdate $e) => $e->name === 'conversations.changed' && $e->reaches($admin));
     }
 
@@ -349,7 +349,7 @@ class GroupsTest extends TestCase
 
         $this->actingAs($this->owner)->postJson("/api/groups/{$group}/leave")->assertNoContent();
 
-        $this->assertDatabaseCount('conversations', 0);
+        $this->assertDatabaseCount('chat_conversations', 0);
         $this->assertDatabaseCount('chat_messages', 0);
     }
 

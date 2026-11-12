@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Policies;
+namespace App\Policies\Chat;
 
-use App\Models\ChatMessage;
+use App\Models\Chat\ChatMessage;
 use App\Models\User;
 
 class ChatMessagePolicy

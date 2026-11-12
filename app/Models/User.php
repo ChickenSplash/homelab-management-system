@@ -2,6 +2,10 @@
 
 namespace App\Models;
 
+use App\Models\Chat\Block;
+use App\Models\Chat\Conversation;
+use App\Models\Chat\ConversationMember;
+use App\Models\Chat\Friendship;
 use App\Support\Live;
 use App\Support\Presence;
 use Database\Factories\UserFactory;

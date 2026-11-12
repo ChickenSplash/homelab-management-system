@@ -56,16 +56,20 @@ portfolio / glassbox ──/api/contact──► hms
 
 ## Data model
 
+Chat tables took a `chat_` prefix on 2026-11-12 (`2026_11_12_000000_prefix_chat_tables`), to
+match the music ones; their models are in `App\Models\Chat` and their routes in `routes/chat.php`.
+
+
 - **users**: `id`, `public_id` (unique, 8 chars), `display_name`, `email` (nullable, unique),
   `password` (nullable), `is_guest`, `status` (chosen: online / idle / dnd / invisible),
   `presence` (what others last heard: online / idle / dnd / offline), `connected_at` (null while
   no tab is connected), `active_at`, timestamps
-- **friendships**: `requester_id`, `addressee_id`, `accepted_at` (null while pending), one row per pair
-- **blocks**: `blocker_id`, `blocked_id`. Separate from friendships: blocks are one-way and two people can block each other
-- **conversations**: `type` (dm / group), `dm_key` (one DM per pair), `created_by`, `last_message_at`; groups add `name`, `description`, `visibility` (public / private), `invite_code`
-- **conversation_members**: `conversation_id`, `user_id`, `role` (owner / admin / mod / member), `last_read_message_id`
+- **chat_friendships**: `requester_id`, `addressee_id`, `accepted_at` (null while pending), one row per pair
+- **chat_blocks**: `blocker_id`, `blocked_id`. Separate from friendships: blocks are one-way and two people can block each other
+- **chat_conversations**: `type` (dm / group), `dm_key` (one DM per pair), `created_by`, `last_message_at`; groups add `name`, `description`, `visibility` (public / private), `invite_code`
+- **chat_conversation_members**: `conversation_id`, `user_id`, `role` (owner / admin / mod / member), `last_read_message_id`
 - **chat_messages**: `conversation_id`, `user_id` (null once the author is deleted), `type` (text / system), `body`, `meta` (system events: who did what), `nonce`, `edited_at`, nullable `reply_to_message_id` (self-reference), soft deletes
-- **conversation_bans**: `conversation_id`, `user_id`, `banned_by`
+- **chat_conversation_bans**: `conversation_id`, `user_id`, `banned_by`
 - **messages**: unchanged, the portfolio contact form
 
 DMs are two-member conversations, so DMs and groups share one message and real-time path.

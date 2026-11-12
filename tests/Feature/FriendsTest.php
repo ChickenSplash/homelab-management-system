@@ -3,7 +3,7 @@
 namespace Tests\Feature;
 
 use App\Events\LiveUpdate;
-use App\Models\Friendship;
+use App\Models\Chat\Friendship;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
@@ -71,7 +71,7 @@ class FriendsTest extends TestCase
         $this->actingAs($this->me)->postJson('/api/friends', ['id' => $this->them->public_id])
             ->assertOk()->assertJson(['status' => 'outgoing']);
 
-        $this->assertDatabaseCount('friendships', 1);
+        $this->assertDatabaseCount('chat_friendships', 1);
     }
 
     public function test_asking_someone_who_already_asked_you_makes_you_friends(): void
@@ -82,7 +82,7 @@ class FriendsTest extends TestCase
             ->assertOk()->assertJson(['status' => 'friend']);
 
         $this->assertSame('friend', $this->friendsOf($this->them)[0]['status']);
-        $this->assertDatabaseCount('friendships', 1);
+        $this->assertDatabaseCount('chat_friendships', 1);
     }
 
     public function test_only_the_addressee_can_accept(): void
@@ -104,7 +104,7 @@ class FriendsTest extends TestCase
             $other = $remover->is($this->me) ? $this->them : $this->me;
 
             $this->actingAs($remover)->deleteJson("/api/friends/{$other->public_id}")->assertNoContent();
-            $this->assertDatabaseCount('friendships', 0);
+            $this->assertDatabaseCount('chat_friendships', 0);
         }
 
         $this->actingAs($this->me)->deleteJson("/api/friends/{$this->them->public_id}")->assertNotFound();
@@ -117,7 +117,7 @@ class FriendsTest extends TestCase
         $this->actingAs($this->me)->putJson("/api/blocks/{$this->them->public_id}")->assertNoContent();
         $this->actingAs($this->me)->putJson("/api/blocks/{$this->them->public_id}")->assertNoContent();
 
-        $this->assertDatabaseCount('friendships', 0);
+        $this->assertDatabaseCount('chat_friendships', 0);
         $this->assertSame([$this->them->public_id], array_column($this->actingAs($this->me)->getJson('/api/blocks')->json(), 'id'));
         $this->assertTrue($this->told($this->them));
     }
@@ -158,7 +158,7 @@ class FriendsTest extends TestCase
 
         $this->actingAs($guest)->fromSpa()->postJson('/api/auth/logout')->assertNoContent();
 
-        $this->assertDatabaseCount('friendships', 0);
+        $this->assertDatabaseCount('chat_friendships', 0);
         $this->assertTrue($this->told($this->me));
     }
 

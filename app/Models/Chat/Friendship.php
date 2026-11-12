@@ -1,13 +1,16 @@
 <?php
 
-namespace App\Models;
+namespace App\Models\Chat;
 
+use App\Models\User;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 // A friend request until accepted_at is set, then a friendship. One row per pair.
+#[Table('chat_friendships')]
 #[Fillable(['requester_id', 'addressee_id', 'accepted_at'])]
 class Friendship extends Model
 {
