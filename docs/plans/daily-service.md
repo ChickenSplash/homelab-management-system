@@ -1,6 +1,6 @@
 # Daily service
 
-Status: implemented and verified, prepared for production deployment. Frontend: `ChickenSplash/daily-ui`. Production origin: `https://daily.chickensplash.dpdns.org`.
+Status: deployed on 13 November 2026. Frontend: `ChickenSplash/daily-ui`. Production origin: `https://daily.chickensplash.dpdns.org`.
 
 ## Ownership and storage
 
@@ -60,3 +60,10 @@ Backend feature tests cover owner isolation, guest cascades, revisions, exact Ma
 - Verify the shared terms reflect journal data, temporary guest data, browser recovery drafts and absence of end-to-end encryption.
 - Check `hms-scheduler` is running and `daily:sync` succeeds.
 - Deploy through HMS `main` after a consistent SQLite snapshot and an off-host integrity/restore check. Set `DAILY_URL=https://daily.chickensplash.dpdns.org`, retain existing Sanctum hosts and add `daily.chickensplash.dpdns.org`. The frontend container is `daily-ui` on the existing `edge` network; its tunnel target is `http://daily-ui:80`.
+
+## Deployment verification, 13 November 2026
+
+- The additive Daily migration is applied; `daily:sync` succeeds and is registered hourly in the running scheduler.
+- Public HTTPS smoke checks passed for shared sign-in, journal autosave/reload, checkbox completion, export and cross-account ownership isolation. Both temporary guest accounts were deleted. Existing Chat, Music and shared sign-in endpoints remained available after rollout.
+- Consistent pre-migration snapshot: `backup-before-daily-20261112T235847Z.sqlite`, retained in the database volume and privately under `~/.local/state/hms-backups/` on the server and development PC. The off-host copy passed checksum, SQLite restore, integrity and foreign-key checks. The previous image is retained as `hms:pre-daily-20261112`.
+- No automatic database backup job was found. Scheduling and monitoring regular off-host backups remains follow-up work; the deployment snapshot is not a substitute for that.
