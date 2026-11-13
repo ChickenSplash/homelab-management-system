@@ -19,6 +19,10 @@ WORKDIR /app
 COPY . .
 COPY --from=vendor /app/vendor ./vendor
 
+# A restrictive checkout umask must not leave root-owned source unreadable to
+# www-data. Keep source root-owned and non-writable by the runtime user.
+RUN chmod -R a+rX app bootstrap config database docker public resources routes artisan composer.json composer.lock
+
 # Octane copies its worker script into public/ on start, which www-data cannot write to.
 RUN cp vendor/laravel/octane/src/Commands/stubs/frankenphp-worker.php public/
 
