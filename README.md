@@ -2,8 +2,8 @@
 
 The API behind the homelab's apps: accounts (including guests), real-time events, the music
 service and the portfolio's contact form. Each app brings its own front end and talks to this
-([chat-ui](https://github.com/ChickenSplash/chat-ui), music-ui). The only pages HMS serves itself
-are the shared sign-in site (see [Sign-in site](#sign-in-site)).
+([chat-ui](https://github.com/ChickenSplash/chat-ui), music-ui). HMS also serves the minimal
+landing page and shared sign-in site (see [Sign-in site](#sign-in-site)).
 
 Plans: [messaging](docs/plans/messaging-service.md) (closed), [music](docs/plans/music-service.md).
 
@@ -85,13 +85,16 @@ back as the `X-XSRF-TOKEN` header (`GET /sanctum/csrf-cookie` first if there isn
 
 ## Sign-in site
 
-HMS serves a small server-rendered site (Blade, one stylesheet, no JavaScript) on
+HMS serves a small server-rendered site (Blade, one stylesheet, one navigation script) on
 `ACCOUNTS_URL`'s host, `chickensplash.dpdns.org`. The tunnel sends that hostname straight to
 `http://hms:3000`.
 
 | Path | |
 |---|---|
-| `/` | The launcher (your apps, log out) once signed in, otherwise a redirect to `/login` |
+| `/`, `/about` | Public About page: background, work, homelab and personal projects |
+| `/portfolio` | Screenshot cards linking to the live Chat, Music and Daily apps, plus Night Sky on GitHub |
+| `/profile` | Your apps and log out once signed in, otherwise a redirect to `/login` |
+| `/contact` | `POST`. About-page contact form, stores a message and emails the admin using the existing API handler |
 | `/login`, `/register`, `/guest` | One tab each. `POST` signs in, then redirects to `return` or `/` |
 | `/logout` | `POST`. Ends the session for every app; a guest account is deleted |
 | `/terms` | The terms and privacy policy for every app |
@@ -104,7 +107,25 @@ HMS serves a small server-rendered site (Blade, one stylesheet, no JavaScript) o
   the launcher, so the site can't be used as an open redirect (`app/Support/Accounts.php`).
 - **Only these pages on that host:** `KeepAccountsHostToItsPages` answers 404 there for
   everything else (`/api`, `/sanctum`, broadcasting, media). The API stays behind the apps' proxies.
-- **Headers:** a CSP with no script at all, `frame-ancestors 'none'` and `form-action` limited to
+- **Navigation:** labelled About, Portfolio and Profile/Login icons. Opted-in same-origin
+  links fetch the next Blade page and replace only `#page-content`, preserving the navigation
+  shell, updating its active state and supporting Back/Forward. No framework, build step,
+  inline scripts or eval. Without JavaScript, links load normally. Forms still use native
+  POST/redirect navigation, keeping CSRF, validation and cross-app sign-in unchanged.
+- **Sign-in preference:** Profile/Login defaults to Join as guest. The last displayed
+  sign-in tab is remembered in `localStorage` (`hms.auth-tab`) for future visits in that
+  browser, including app redirects to `/login?return=…`. Only the tab is saved, not fields
+  or credentials. Blocked storage falls back to the guest default.
+- **Portfolio images:** `public/images/portfolio/{chat,music,daily,night-sky}.webp`.
+  Screenshots are resized to 800 pixels wide and compressed as WebP thumbnails.
+  Each card shows only its project name and links directly to the live site or repository.
+  Until a screenshot is supplied, its card uses a plain background without a broken image.
+- **Contact:** the About page ends with mail/phone links with integrated copy controls and an email,
+  subject and message form. `/contact` uses web CSRF protection and the same handler, honeypot
+  and per-client five-per-minute limit as `/api/contact`. It works without JavaScript;
+  `contact.js` adds inline submission feedback and clipboard status. No database migration
+  or additional mail configuration is needed. The apex API remains blocked.
+- **Headers:** a CSP allowing only same-origin scripts and fetch, `frame-ancestors 'none'` and `form-action` limited to
   the site and the apps, plus HSTS, `nosniff` and `no-store`.
 - **Rate limits:** the same `auth` (10 a minute) and `guest` (3 a minute, 30 a day) limits per
   `CF-Connecting-IP`. An expired form or too many attempts goes back to the form with a note.

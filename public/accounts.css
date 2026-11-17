@@ -8,7 +8,7 @@
     --muted: #52525b;
     --border: #d4d4d8;
     --field: #ffffff;
-    --accent: #4f46e5;
+    --accent: #27272a;
     --accent-text: #ffffff;
     --danger: #dc2626;
     --error: #b91c1c;
@@ -23,7 +23,7 @@
         --muted: #a1a1aa;
         --border: #3f3f46;
         --field: #27272a;
-        --accent: #818cf8;
+        --accent: #e4e4e7;
         --accent-text: #0b0b0f;
         --error: #fca5a5;
         --note-bg: #450a0a;
@@ -51,7 +51,7 @@ main {
 
 main.narrow {
     max-width: 28rem;
-    min-height: 100dvh;
+    min-height: calc(100dvh - 6rem);
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -166,7 +166,19 @@ input[type="password"] {
     font: inherit;
 }
 
+textarea {
+    width: 100%;
+    padding: 0.65rem 0.75rem;
+    background: var(--field);
+    color: var(--text);
+    border: 1px solid var(--border);
+    font: inherit;
+    resize: vertical;
+    min-height: 8rem;
+}
+
 input:focus-visible,
+textarea:focus-visible,
 button:focus-visible,
 a:focus-visible {
     outline: 2px solid var(--accent);
@@ -174,6 +186,10 @@ a:focus-visible {
 }
 
 input[aria-invalid="true"] {
+    border-color: var(--error);
+}
+
+textarea[aria-invalid="true"] {
     border-color: var(--error);
 }
 
@@ -266,4 +282,288 @@ button.danger {
 
 .footer a {
     color: var(--muted);
+}
+
+.site-header {
+    height: 6rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+}
+
+.site-nav {
+    display: flex;
+    gap: 0.375rem;
+    padding: 0.375rem;
+    border: 1px solid var(--border);
+    border-radius: 1rem;
+    background: var(--card);
+}
+
+.site-nav a {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 2.75rem;
+    padding: 0.625rem 0.875rem;
+    font-size: 0.875rem;
+    text-decoration: none;
+    border-radius: 0.625rem;
+    color: var(--muted);
+}
+
+.site-nav a:hover,
+.site-nav a[aria-current="page"] {
+    background: var(--field);
+    color: var(--text);
+}
+
+.site-nav a[aria-current="page"] {
+    box-shadow: inset 0 0 0 1px var(--border);
+}
+
+.site-nav svg {
+    width: 1.25rem;
+    height: 1.25rem;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+main.landing {
+    max-width: 64rem;
+    padding-top: 2rem;
+}
+
+main:focus {
+    outline: none;
+}
+
+.about-copy {
+    max-width: 42rem;
+    margin: 0 auto;
+    padding-bottom: 2rem;
+    line-height: 1.75;
+}
+
+.about-copy h1 {
+    font-size: clamp(2rem, 5vw, 3rem);
+    line-height: 1.2;
+}
+
+.about-copy header {
+    margin-bottom: 2rem;
+}
+
+.about-copy .about-intro {
+    margin-top: 0.75rem;
+    color: var(--muted);
+}
+
+.about-copy h2 {
+    margin-top: 2rem;
+}
+
+.about-copy p {
+    margin: 0.75rem 0 1.25rem;
+}
+
+.portfolio-layout {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+}
+
+.portfolio-section + .portfolio-section {
+    margin-top: 3rem;
+}
+
+.portfolio-section h2 {
+    margin: 0 0 1rem;
+}
+
+.project-card {
+    position: relative;
+    display: flex;
+    align-items: flex-end;
+    isolation: isolate;
+    overflow: hidden;
+    aspect-ratio: 16 / 10;
+    padding: 1.25rem;
+    border: 1px solid var(--border);
+    border-radius: 0.75rem;
+    background: #18181b;
+    color: #ffffff;
+    text-decoration: none;
+}
+
+.project-card img,
+.project-card::before {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -1;
+}
+
+.project-card img {
+    object-fit: cover;
+    transition: transform 180ms ease-out;
+}
+
+.project-card::before {
+    content: "";
+    background: linear-gradient(transparent 25%, rgb(0 0 0 / 0.85));
+    z-index: 0;
+}
+
+.project-card span {
+    position: relative;
+    z-index: 1;
+    font-size: 1.125rem;
+    font-weight: 600;
+}
+
+.project-card:hover img {
+    transform: scale(1.03);
+}
+
+.contact-section {
+    margin-top: 3rem;
+    padding-top: 1rem;
+    max-width: 42rem;
+}
+
+.contact-section h2 {
+    margin: 0 0 1rem;
+}
+
+.contact-methods {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+.contact-method {
+    display: inline-flex;
+    max-width: 100%;
+    align-items: stretch;
+    border: 1px solid var(--border);
+    border-radius: 0.375rem;
+    background: var(--card);
+}
+
+.contact-method a {
+    padding: 0.65rem 0.75rem;
+    color: var(--text);
+    font-size: 0.875rem;
+    text-decoration: none;
+    overflow-wrap: anywhere;
+}
+
+.contact-copy {
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    width: 2.75rem;
+    min-height: 2.75rem;
+    padding: 0.5rem;
+    border-left: 1px solid var(--border);
+    border-radius: 0 0.375rem 0.375rem 0;
+    background: transparent;
+    color: var(--muted);
+}
+
+.contact-copy:hover,
+.contact-method a:hover {
+    background: var(--field);
+    color: var(--text);
+}
+
+.contact-copy svg {
+    width: 1rem;
+    height: 1rem;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.contact-copy .copied-icon,
+.contact-copy.is-copied .copy-icon {
+    display: none;
+}
+
+.contact-copy.is-copied .copied-icon {
+    display: block;
+}
+
+.contact-copy-status {
+    min-height: 1.5em;
+    margin: 0.5rem 0 0.75rem;
+}
+
+.contact-fields {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.contact-form input,
+.contact-form textarea,
+.contact-submit button {
+    border-radius: 0.375rem;
+}
+
+.contact-form .contact-honeypot {
+    display: none;
+}
+
+.contact-submit {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.75rem 1rem;
+}
+
+.contact-submit button {
+    width: auto;
+    min-height: 2.75rem;
+    font-size: 0.875rem;
+}
+
+.contact-submit button:disabled {
+    cursor: wait;
+    opacity: 0.6;
+}
+
+.contact-form-status {
+    margin: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .project-card img {
+        transition: none;
+    }
+}
+
+@media (max-width: 40rem) {
+    .site-nav a {
+        flex-direction: column;
+        gap: 0.25rem;
+        padding: 0.5rem 0.75rem;
+    }
+
+    .portfolio-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .contact-fields {
+        grid-template-columns: 1fr;
+    }
 }

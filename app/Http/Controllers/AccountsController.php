@@ -21,6 +21,16 @@ class AccountsController
 {
     public function home(Request $request): View|RedirectResponse
     {
+        return view('accounts.about');
+    }
+
+    public function portfolio(): View
+    {
+        return view('accounts.portfolio');
+    }
+
+    public function profile(Request $request): View|RedirectResponse
+    {
         if (! Auth::guard('web')->check()) {
             return redirect('/login');
         }

@@ -50,7 +50,8 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->prependToGroup('api', KeepAccountsHostToItsPages::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        $exceptions->shouldRenderJsonWhen(fn (Request $request) => ! $request->routeIs('accounts.*'));
+        $exceptions->shouldRenderJsonWhen(fn (Request $request) => ! $request->routeIs('accounts.*')
+            || ($request->routeIs('accounts.contact') && $request->expectsJson()));
 
         // An expired form or too many attempts on the sign-in site: back to the form with a note,
         // rather than a bare error page (which its CSP would leave unstyled anyway).
@@ -62,6 +63,10 @@ return Application::configure(basePath: dirname(__DIR__))
             };
 
             if ($message && $request->routeIs('accounts.*') && $request->hasSession()) {
+                if ($request->routeIs('accounts.contact') && $request->expectsJson()) {
+                    return response()->json(['message' => $message], $e->getStatusCode());
+                }
+
                 return back()->withInput()->withErrors(['form' => $message]);
             }
         });

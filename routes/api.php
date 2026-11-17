@@ -2,14 +2,10 @@
 
 use App\Events\Ping;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\ContactController;
 use App\Http\Middleware\DailyPrivate;
-use App\Mail\ContactMessageReceived;
-use App\Models\Message;
-use App\Support\ClientIp;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Str;
 
 // Signing in happens on the sign-in site (routes/accounts.php), which shares its session with the apps.
 Route::prefix('auth')->controller(AuthController::class)->middleware('auth:sanctum')->group(function () {
@@ -37,34 +33,4 @@ Route::middleware(['auth:sanctum', 'throttle:ping'])->post('/ping', function (Re
 
 // The portfolio's contact form. Its nginx (and the glass box) forward /api/contact here over
 // the edge network, so the form posts to its own origin and there is no CORS to set up.
-Route::middleware('throttle:contact')->post('/contact', function (Request $request) {
-    // Bots fill every field they find; people never see this one. Pretend it worked.
-    if (filled($request->input('website'))) {
-        return response()->json(['ok' => true], 201);
-    }
-
-    $validated = $request->validate([
-        'email' => ['required', 'email', 'max:255'],
-        'subject' => ['required', 'string', 'max:150'],
-        'message' => ['required', 'string', 'max:5000'],
-    ]);
-
-    $message = Message::create([
-        'email' => $validated['email'],
-        'subject' => $validated['subject'],
-        'body' => $validated['message'],
-        'ip' => ClientIp::of($request),
-        'user_agent' => Str::limit((string) $request->userAgent(), 250, ''),
-    ]);
-
-    // The message is already saved, so a mail hiccup is logged rather than shown to the sender.
-    if ($admin = config('app.admin_email')) {
-        try {
-            Mail::to($admin)->send(new ContactMessageReceived($message));
-        } catch (Throwable $e) {
-            report($e);
-        }
-    }
-
-    return response()->json(['ok' => true], 201);
-});
+Route::middleware('throttle:contact')->post('/contact', [ContactController::class, 'store']);

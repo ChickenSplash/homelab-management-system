@@ -174,12 +174,12 @@ class AccountsTest extends TestCase
 
     public function test_the_launcher_lists_the_apps_once_signed_in(): void
     {
-        $this->get(self::SITE.'/')->assertRedirect('/login');
+        $this->get(self::SITE.'/profile')->assertRedirect('/login');
 
         $this->actingAs(User::factory()->create(['display_name' => 'Taylor']))
-            ->get(self::SITE.'/')
+            ->get(self::SITE.'/profile')
             ->assertOk()
-            ->assertSee('Hi, Taylor')
+            ->assertSee('Taylor')
             ->assertSee('href="https://chat.test"', escape: false)
             ->assertSee('href="https://music.test"', escape: false)
             ->assertSee('Log out');
@@ -188,8 +188,49 @@ class AccountsTest extends TestCase
     public function test_the_launcher_warns_a_guest_that_logging_out_deletes_them(): void
     {
         $this->actingAs(User::factory()->guest()->create())
-            ->get(self::SITE.'/')
+            ->get(self::SITE.'/profile')
             ->assertSee('Log out and delete guest account');
+    }
+
+    public function test_the_landing_pages_are_public(): void
+    {
+        foreach (['/' => 'About', '/about' => 'About', '/portfolio' => 'Portfolio'] as $path => $title) {
+            $response = $this->get(self::SITE.$path)->assertOk()
+                ->assertSee('<title>'.$title.' · Homelab</title>', escape: false)
+                ->assertSee('id="page-content"', escape: false)
+                ->assertSee('aria-label="Main navigation"', escape: false)
+                ->assertSee('data-navigate', escape: false)
+                ->assertDontSee('Coming soon');
+
+            if ($path === '/portfolio') {
+                $response->assertSee('Hosted on my homelab')
+                    ->assertSee('GitHub projects')
+                    ->assertSee('href="https://chat.chickensplash.dpdns.org"', escape: false)
+                    ->assertSee('href="https://music.chickensplash.dpdns.org"', escape: false)
+                    ->assertSee('href="https://daily.chickensplash.dpdns.org"', escape: false)
+                    ->assertSee('href="https://github.com/ChickenSplash/night-sky"', escape: false);
+                preg_match_all('/<a class="project-card"[^>]*>(.*?)<\/a>/s', $response->getContent(), $cards);
+                $this->assertSame(['Chat', 'Music', 'Daily', 'Night Sky'], array_map(
+                    fn (string $card) => trim(strip_tags($card)),
+                    $cards[1],
+                ));
+            } else {
+                $response->assertSee("I'm Emanuel.", escape: false)
+                    ->assertSee('What I work on')
+                    ->assertSee('Beyond the browser');
+            }
+        }
+    }
+
+    public function test_the_layout_loads_only_the_same_origin_navigation_script(): void
+    {
+        $response = $this->get(self::SITE.'/login')->assertOk()
+            ->assertSee('src="/accounts.js?v=', escape: false);
+        $csp = $response->headers->get('Content-Security-Policy');
+        $this->assertStringContainsString("script-src 'self';", $csp);
+        $this->assertStringContainsString("connect-src 'self';", $csp);
+        $this->assertStringNotContainsString('unsafe-eval', $csp);
+        $this->assertStringNotContainsString('unsafe-inline', $csp);
     }
 
     public function test_logging_out_keeps_a_user_but_deletes_a_guest(): void
@@ -227,6 +268,8 @@ class AccountsTest extends TestCase
     public function test_the_sign_in_pages_only_exist_on_the_sign_in_site(): void
     {
         $this->get('https://chat.test/login')->assertNotFound();
+        $this->get('https://chat.test/portfolio')->assertNotFound();
+        $this->get('https://chat.test/profile')->assertNotFound();
         $this->get('http://localhost/login')->assertNotFound();
         $this->getJson('http://localhost/')->assertOk()->assertJson(['ok' => true]);
     }

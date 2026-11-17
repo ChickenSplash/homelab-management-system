@@ -1,11 +1,17 @@
 <?php
 
 use App\Http\Controllers\AccountsController;
+use App\Http\Controllers\ContactController;
 use Illuminate\Support\Facades\Route;
 
 // The sign-in site, on ACCOUNTS_URL's host only (see bootstrap/app.php).
+Route::post('/contact', [ContactController::class, 'submit'])->middleware('throttle:contact')->name('accounts.contact');
+
 Route::controller(AccountsController::class)->name('accounts.')->group(function () {
     Route::get('/', 'home')->name('home');
+    Route::get('/about', 'home')->name('about');
+    Route::get('/portfolio', 'portfolio')->name('portfolio');
+    Route::get('/profile', 'profile')->name('profile');
     Route::get('/login', 'showLogin')->name('login');
     Route::get('/register', 'showRegister')->name('register');
     Route::get('/guest', 'showGuest')->name('guest');

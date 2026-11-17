@@ -8,7 +8,7 @@ use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * The sign-in pages are plain HTML and one stylesheet: no script at all, never framed. Forms
+ * The pages use same-origin styles and navigation script, never inline code or framing. Forms
  * may only post here, and (since browsers check the redirect after a post too) on to the apps.
  */
 class AccountsSecurityHeaders
@@ -20,7 +20,7 @@ class AccountsSecurityHeaders
         $formAction = implode(' ', ["'self'", ...Accounts::appOrigins()]);
 
         $response->headers->add([
-            'Content-Security-Policy' => "default-src 'none'; style-src 'self'; img-src 'self'; form-action {$formAction}; frame-ancestors 'none'; base-uri 'none'",
+            'Content-Security-Policy' => "default-src 'none'; script-src 'self'; connect-src 'self'; style-src 'self'; img-src 'self'; form-action {$formAction}; frame-ancestors 'none'; base-uri 'none'",
             'X-Content-Type-Options' => 'nosniff',
             'Referrer-Policy' => 'same-origin',
             'Cache-Control' => 'no-store, private',
