@@ -127,6 +127,8 @@ HMS serves a small server-rendered site (Blade, one stylesheet, one navigation s
   or additional mail configuration is needed. The apex API remains blocked.
 - **Headers:** a CSP allowing only same-origin scripts and fetch, `frame-ancestors 'none'` and `form-action` limited to
   the site and the apps, plus HSTS, `nosniff` and `no-store`.
+  `Cache-Control: no-transform` prevents Cloudflare from replacing email addresses with
+  protected links: its injected decoder does not run inside partial-navigation fragments.
 - **Rate limits:** the same `auth` (10 a minute) and `guest` (3 a minute, 30 a day) limits per
   `CF-Connecting-IP`. An expired form or too many attempts goes back to the form with a note.
 - **Locally:** cookies ignore the port, so an app on `localhost:8090` and the site on

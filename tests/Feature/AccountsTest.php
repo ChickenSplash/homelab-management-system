@@ -287,6 +287,7 @@ class AccountsTest extends TestCase
         $this->assertStringContainsString("form-action 'self' https://chat.test https://music.test;", $csp);
         $this->assertStringNotContainsString('unsafe-inline', $csp);
         $this->assertStringContainsString('no-store', $response->headers->get('Cache-Control'));
+        $this->assertStringContainsString('no-transform', $response->headers->get('Cache-Control'));
     }
 
     public function test_the_session_cookie_is_shared_with_the_apps_through_the_parent_domain(): void

@@ -23,7 +23,9 @@ class AccountsSecurityHeaders
             'Content-Security-Policy' => "default-src 'none'; script-src 'self'; connect-src 'self'; style-src 'self'; img-src 'self'; form-action {$formAction}; frame-ancestors 'none'; base-uri 'none'",
             'X-Content-Type-Options' => 'nosniff',
             'Referrer-Policy' => 'same-origin',
-            'Cache-Control' => 'no-store, private',
+            // Cloudflare's email rewriting relies on an injected decoder that cannot run
+            // inside fetched page fragments. Keep addresses and mailto links intact.
+            'Cache-Control' => 'no-store, private, no-transform',
         ]);
 
         if ($request->isSecure()) {
