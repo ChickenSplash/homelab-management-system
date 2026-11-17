@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
@@ -172,16 +173,20 @@ class AccountsTest extends TestCase
         $this->assertDatabaseCount('users', 1);
     }
 
-    public function test_the_launcher_lists_the_apps_once_signed_in(): void
+    public function test_the_profile_shows_the_current_account_without_app_links(): void
     {
         $this->get(self::SITE.'/profile')->assertRedirect('/login');
 
-        $this->actingAs(User::factory()->create(['display_name' => 'Taylor']))
+        $this->actingAs(User::factory()->create(['display_name' => 'Taylor', 'email' => 'taylor@example.com']))
             ->get(self::SITE.'/profile')
             ->assertOk()
             ->assertSee('Taylor')
-            ->assertSee('href="https://chat.test"', escape: false)
-            ->assertSee('href="https://music.test"', escape: false)
+            ->assertSee('Signed in as taylor@example.com')
+            ->assertDontSee('href="https://chat.test"', escape: false)
+            ->assertDontSee('href="https://music.test"', escape: false)
+            ->assertDontSee('class="apps"', escape: false)
+            ->assertSee('Change password')
+            ->assertSee('Terms and privacy')
             ->assertSee('Log out');
     }
 
@@ -189,7 +194,61 @@ class AccountsTest extends TestCase
     {
         $this->actingAs(User::factory()->guest()->create())
             ->get(self::SITE.'/profile')
-            ->assertSee('Log out and delete guest account');
+            ->assertSee('Log out and delete guest account')
+            ->assertDontSee('Current password');
+    }
+
+    public function test_a_signed_in_user_can_change_their_password_from_the_profile(): void
+    {
+        $user = User::factory()->create();
+        $other = User::factory()->create();
+        $this->actingAs($user)->get(self::SITE.'/profile')->assertOk();
+        $before = session()->getId();
+
+        $this->post(self::SITE.'/profile/password', [
+            'current_password' => 'password',
+            'password' => 'a-new-secure-password',
+            'password_confirmation' => 'a-new-secure-password',
+        ])->assertRedirect('/profile')->assertSessionHas('password_changed', true);
+
+        $this->assertTrue(Hash::check('a-new-secure-password', $user->fresh()->password));
+        $this->assertFalse(Hash::check('password', $user->fresh()->password));
+        $this->assertTrue(Hash::check('password', $other->fresh()->password));
+        $this->assertAuthenticatedAs($user);
+        $this->assertNotSame($before, session()->getId());
+    }
+
+    public function test_profile_password_changes_require_the_current_password_and_confirmation(): void
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        foreach ([
+            ['current_password' => 'wrong', 'password' => 'a-new-secure-password', 'password_confirmation' => 'a-new-secure-password'],
+            ['current_password' => 'password', 'password' => 'a-new-secure-password', 'password_confirmation' => 'different-password'],
+            ['current_password' => 'password', 'password' => 'short', 'password_confirmation' => 'short'],
+        ] as $values) {
+            $response = $this->from(self::SITE.'/profile')
+                ->post(self::SITE.'/profile/password', $values)
+                ->assertRedirect(self::SITE.'/profile')->assertSessionHasErrors();
+            foreach (['current_password', 'password', 'password_confirmation'] as $field) {
+                $response->assertSessionMissing('_old_input.'.$field);
+            }
+        }
+
+        $this->assertTrue(Hash::check('password', $user->fresh()->password));
+    }
+
+    public function test_signed_out_visitors_and_guests_cannot_change_a_password(): void
+    {
+        $this->post(self::SITE.'/profile/password', [])->assertRedirect('/login');
+        $guest = User::factory()->guest()->create();
+        $this->actingAs($guest)->post(self::SITE.'/profile/password', [
+            'current_password' => 'password',
+            'password' => 'a-new-secure-password',
+            'password_confirmation' => 'a-new-secure-password',
+        ])->assertForbidden();
+        $this->assertNull($guest->fresh()->password);
     }
 
     public function test_the_landing_pages_are_public(): void

@@ -93,7 +93,8 @@ HMS serves a small server-rendered site (Blade, one stylesheet, one navigation s
 |---|---|
 | `/`, `/about` | Public About page: background, work, homelab and personal projects |
 | `/portfolio` | Screenshot cards linking to the live Chat, Music and Daily apps, plus Night Sky on GitHub |
-| `/profile` | Your apps and log out once signed in, otherwise a redirect to `/login` |
+| `/profile` | Current name/email, password change (registered users), logout and terms. No app links |
+| `/profile/password` | `POST`. Change the signed-in user's password, requiring their current password and confirmation |
 | `/contact` | `POST`. About-page contact form, stores a message and emails the admin using the existing API handler |
 | `/login`, `/register`, `/guest` | One tab each. `POST` signs in, then redirects to `return` or `/` |
 | `/logout` | `POST`. Ends the session for every app; a guest account is deleted |

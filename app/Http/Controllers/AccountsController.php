@@ -35,7 +35,19 @@ class AccountsController
             return redirect('/login');
         }
 
-        return view('accounts.home', ['user' => Auth::guard('web')->user(), 'apps' => Accounts::apps()]);
+        return view('accounts.home', ['user' => Auth::guard('web')->user()]);
+    }
+
+    public function updatePassword(Request $request, AuthController $auth): RedirectResponse
+    {
+        if (! Auth::guard('web')->check()) {
+            return redirect('/login');
+        }
+
+        $auth->updatePassword($request);
+        $request->session()->regenerate();
+
+        return redirect('/profile')->with('password_changed', true);
     }
 
     public function showLogin(Request $request): View|RedirectResponse

@@ -20,6 +20,7 @@ Route::controller(AccountsController::class)->name('accounts.')->group(function 
     Route::middleware('throttle:auth')->group(function () {
         Route::post('/login', 'login')->name('login.store');
         Route::post('/register', 'register')->name('register.store');
+        Route::post('/profile/password', 'updatePassword')->name('password.update');
     });
 
     Route::post('/guest', 'guest')->middleware('throttle:guest')->name('guest.store');

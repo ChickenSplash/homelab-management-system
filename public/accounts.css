@@ -284,6 +284,29 @@ button.danger {
     color: var(--muted);
 }
 
+.profile-settings {
+    margin-bottom: 1rem;
+}
+
+.profile-settings summary {
+    cursor: pointer;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.profile-settings summary:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 4px;
+}
+
+.profile-settings form {
+    margin-top: 1.25rem;
+}
+
+.profile-status {
+    text-align: center;
+}
+
 .site-header {
     height: 6rem;
     display: flex;
