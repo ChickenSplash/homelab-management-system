@@ -1,0 +1,61 @@
+# Octane's FrankenPHP Caddyfile (vendor/laravel/octane/src/Commands/stubs/Caddyfile,
+# v2.23.0) plus the @static Cache-Control header. Compare with the stub after
+# upgrading Octane.
+{
+	{$CADDY_GLOBAL_OPTIONS}
+
+	admin {$CADDY_SERVER_ADMIN_HOST}:{$CADDY_SERVER_ADMIN_PORT}
+
+	frankenphp {
+		worker {
+			file "{$APP_PUBLIC_PATH}/frankenphp-worker.php"
+			{$CADDY_SERVER_WORKER_DIRECTIVE}
+			{$CADDY_SERVER_WATCH_DIRECTIVES}
+		}
+	}
+}
+
+{$CADDY_EXTRA_CONFIG}
+
+{$CADDY_SERVER_SERVER_NAME} {
+	log {
+		level {$CADDY_SERVER_LOG_LEVEL}
+
+		# Redact the authorization query parameter that can be set by Mercure...
+		format filter {
+			wrap {$CADDY_SERVER_LOGGER}
+			fields {
+				request>uri query {
+					replace authorization REDACTED
+				}
+			}
+		}
+	}
+
+	# Compressing the Mercure stream costs memory per subscriber and enables BREACH-style attacks...
+	@compressible not path /.well-known/mercure
+
+	route {
+		root * "{$APP_PUBLIC_PATH}"
+		encode @compressible zstd br gzip
+
+		# Mercure configuration is injected here...
+		{$CADDY_SERVER_EXTRA_DIRECTIVES}
+
+		# Files in public/ (accounts.js, contact.js, CSS, images) have stable names,
+		# so browsers must revalidate them or a deploy goes unseen. "?" only sets the
+		# header when none is present.
+		@static {
+			file {path}
+			not path */
+		}
+		header @static ?Cache-Control "no-cache"
+
+		php_server {
+			index frankenphp-worker.php
+			try_files {path} frankenphp-worker.php
+			# Required for the public/storage/ directory...
+			resolve_root_symlink
+		}
+	}
+}

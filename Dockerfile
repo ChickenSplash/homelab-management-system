@@ -44,4 +44,4 @@ USER www-data
 EXPOSE 3000 8080
 
 ENTRYPOINT ["entrypoint"]
-CMD ["php", "artisan", "octane:frankenphp", "--host=0.0.0.0", "--port=3000", "--workers=4", "--max-requests=500"]
+CMD ["php", "artisan", "octane:frankenphp", "--host=0.0.0.0", "--port=3000", "--workers=4", "--max-requests=500", "--caddyfile=docker/Caddyfile"]
